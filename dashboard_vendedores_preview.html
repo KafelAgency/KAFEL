@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAFEL - Dashboard de Vendedores (PREVIEW)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0D0F; color: #EDEFF1; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(135deg, #001a4d 0%, #00264d 100%); padding: 30px 20px; overflow-y: auto; }
+        .logo { display: flex; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .logo-icon { width: 50px; height: 50px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 24px; color: #001a4d; }
+        .logo-text h1 { font-size: 24px; font-weight: 700; color: white; }
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 10px; }
+        .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); border-left: 3px solid #4C8DFF; color: white; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #14171A; padding: 20px 30px; border-bottom: 1px solid #2B3136; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 24px; color: #4C8DFF; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-badge { background: #1D2226; border: 1px solid #4C8DFF; border-radius: 20px; padding: 8px 16px; font-size: 13px; color: #4C8DFF; }
+        .content { flex: 1; overflow-y: auto; padding: 30px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card-title { font-size: 14px; color: #9AA3AB; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-value { font-size: 28px; font-weight: 700; color: #4C8DFF; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #EDEFF1; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 12px; background: #1D2226; border: 1px solid #2B3136; border-radius: 8px; color: #EDEFF1; font-size: 14px; }
+        input:focus, select:focus { border-color: #4C8DFF; outline: none; }
+        button { padding: 12px 24px; background: linear-gradient(135deg, #4C8DFF, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .table-container { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+        table { width: 100%; }
+        th { background: #1D2226; padding: 15px; text-align: left; font-weight: 600; color: #9AA3AB; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 15px; border-bottom: 1px solid #2B3136; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge.fisica { background: #E8F5E9; color: #2E7D32; }
+        .badge.digital { background: #E3F2FD; color: #1976D2; }
+        .badge.activo { background: #C8E6C9; color: #2E7D32; }
+        .comision-break { background: #1D2226; border-radius: 10px; padding: 15px; margin: 10px 0; border-left: 4px solid #4C8DFF; }
+        .comision-break div { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
+        .stat-box { background: #1D2226; border: 1px solid #2B3136; border-radius: 10px; padding: 15px; text-align: center; }
+        .stat-label { font-size: 11px; color: #9AA3AB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #4C8DFF; }
+        .success { background: #C8E6C9; color: #2E7D32; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">☕</div>
+                <div class="logo-text"><h1>KAFEL</h1></div>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><div class="nav-link active" onclick="showSection('dashboard')">📊 Dashboard</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="showSection('registrar-venta')">💰 Registrar Venta</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="showSection('mis-ventas')">📋 Mis Ventas</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="showSection('comisiones')">🎯 Comisiones</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="showSection('mi-equipo')">👥 Mi Equipo</div></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h2 id="section-title">Dashboard</h2>
+                <div class="user-info">
+                    <span class="user-badge">👤 Juan García</span>
+                    <button onclick="alert('Demo - No implementado')">Salir</button>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- DASHBOARD -->
+                <div id="dashboard" class="section active">
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-title">Ventas Este Mes</div>
+                            <div class="card-value">$245,000</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Mi Comisión</div>
+                            <div class="card-value">$61,250</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Número de Ventas</div>
+                            <div class="card-value">7</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Comisión de Equipo</div>
+                            <div class="card-value">$15,500</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Desglose de Comisiones Este Mes</div>
+                        <div style="display: grid; gap: 10px;">
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2B3136;">
+                                <span>Comisión por venta física</span>
+                                <strong>$38,750</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2B3136;">
+                                <span>Comisión por venta digital</span>
+                                <strong>$15,500</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                                <span>Bonificación de referidos</span>
+                                <strong>$7,000</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRAR VENTA -->
+                <div id="registrar-venta" class="section">
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">📝 Nueva Venta</h3>
+
+                        <div class="form-group">
+                            <label>Nombre del Cliente</label>
+                            <input type="text" placeholder="Ej: Juan Pérez">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Teléfono del Cliente</label>
+                            <input type="tel" placeholder="Ej: 3001234567">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Monto Total</label>
+                                <input type="number" placeholder="0" value="100000" step="1000">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tipo de Venta</label>
+                                <select>
+                                    <option value="fisica">Física (Presencial)</option>
+                                    <option value="digital">Digital</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Programador Responsable (opcional)</label>
+                            <select>
+                                <option value="">Sin asignar</option>
+                                <option value="miguel">Miguel (Principal)</option>
+                            </select>
+                        </div>
+
+                        <div class="comision-break">
+                            <div class="card-title">Vista Previa de Comisiones</div>
+                            <div style="margin-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                                    <span>Operaciones (10%)</span>
+                                    <strong>$10,000</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                                    <span>Inversor (5%)</span>
+                                    <strong>$5,000</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                                    <span>Fondo KAFEL (30%)</span>
+                                    <strong>$30,000</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin: 8px 0; color: #4C8DFF; border-top: 1px solid #4C8DFF; padding-top: 8px;">
+                                    <span><strong>Mi Comisión (25%)</strong></span>
+                                    <strong>$25,000</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                                    <span>Programador (30%)</span>
+                                    <strong>$30,000</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="alert('✅ Venta registrada exitosamente')" style="width: 100%; margin-top: 20px;">Registrar Venta</button>
+                    </div>
+                </div>
+
+                <!-- MIS VENTAS -->
+                <div id="mis-ventas" class="section">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Tipo</th>
+                                    <th>Mi Comisión</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>15 Sep 2026</td>
+                                    <td>Empresa ABC</td>
+                                    <td>$100,000</td>
+                                    <td><span class="badge fisica">Física</span></td>
+                                    <td>$25,000</td>
+                                    <td><span class="badge activo">Pagada</span></td>
+                                </tr>
+                                <tr>
+                                    <td>14 Sep 2026</td>
+                                    <td>Tienda XYZ</td>
+                                    <td>$80,000</td>
+                                    <td><span class="badge digital">Digital</span></td>
+                                    <td>$20,000</td>
+                                    <td><span class="badge activo">Pagada</span></td>
+                                </tr>
+                                <tr>
+                                    <td>12 Sep 2026</td>
+                                    <td>Negocio 123</td>
+                                    <td>$65,000</td>
+                                    <td><span class="badge fisica">Física</span></td>
+                                    <td>$16,250</td>
+                                    <td><span class="badge activo">Pendiente</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- COMISIONES -->
+                <div id="comisiones" class="section">
+                    <div class="card">
+                        <div class="card-title">Resumen de Comisiones</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Base (Este Mes)</div>
+                                <div class="stat-value">$45,000</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Referidos</div>
+                                <div class="stat-value">$16,250</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Total Acumulada</div>
+                                <div class="stat-value">$156,850</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Desglose Detallado</div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <div class="comision-break">
+                                <div><strong>Comisión por venta física</strong> (25%)</div>
+                                <div style="color: #4C8DFF;"><strong>$25,000</strong></div>
+                                <div style="font-size: 11px; color: #9AA3AB;">15 Sep 2026</div>
+                            </div>
+                            <div class="comision-break">
+                                <div><strong>Comisión por venta digital</strong> (25%)</div>
+                                <div style="color: #4C8DFF;"><strong>$20,000</strong></div>
+                                <div style="font-size: 11px; color: #9AA3AB;">14 Sep 2026</div>
+                            </div>
+                            <div class="comision-break">
+                                <div><strong>Bonificación de referido - Carlos</strong> (5%)</div>
+                                <div style="color: #4C8DFF;"><strong>$8,125</strong></div>
+                                <div style="font-size: 11px; color: #9AA3AB;">12 Sep 2026</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MI EQUIPO -->
+                <div id="mi-equipo" class="section">
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">Mi Equipo de Vendedores</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Teléfono</th>
+                                        <th>Nivel Comisión</th>
+                                        <th>Ventas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Carlos López</td>
+                                        <td>3109876543</td>
+                                        <td>1</td>
+                                        <td>3</td>
+                                    </tr>
+                                    <tr>
+                                        <td>María García</td>
+                                        <td>3115551234</td>
+                                        <td>2</td>
+                                        <td>15</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const titles = {
+                'dashboard': 'Dashboard',
+                'registrar-venta': '💰 Registrar Venta',
+                'mis-ventas': '📋 Mis Ventas',
+                'comisiones': '🎯 Comisiones',
+                'mi-equipo': '👥 Mi Equipo'
+            };
+            document.getElementById('section-title').textContent = titles[sectionId] || 'Dashboard';
+        }
+    </script>
+</body>
+</html>
