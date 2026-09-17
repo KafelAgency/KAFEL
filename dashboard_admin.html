@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAFEL - Panel Administrativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0D0F; color: #EDEFF1; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(135deg, #001a4d 0%, #00264d 100%); padding: 30px 20px; overflow-y: auto; }
+        .logo { display: flex; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .logo-icon { width: 50px; height: 50px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 24px; color: #001a4d; }
+        .logo-text h1 { font-size: 24px; font-weight: 700; color: white; }
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 10px; }
+        .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); border-left: 3px solid #4C8DFF; color: white; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #14171A; padding: 20px 30px; border-bottom: 1px solid #2B3136; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 24px; color: #4C8DFF; }
+        .content { flex: 1; overflow-y: auto; padding: 30px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card-title { font-size: 14px; color: #9AA3AB; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-value { font-size: 28px; font-weight: 700; color: #4C8DFF; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .table-container { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+        table { width: 100%; }
+        th { background: #1D2226; padding: 15px; text-align: left; font-weight: 600; color: #9AA3AB; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 15px; border-bottom: 1px solid #2B3136; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge.fisica { background: #E8F5E9; color: #2E7D32; }
+        .badge.digital { background: #E3F2FD; color: #1976D2; }
+        .stat-box { background: #1D2226; border: 1px solid #2B3136; border-radius: 10px; padding: 15px; text-align: center; }
+        .stat-label { font-size: 11px; color: #9AA3AB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #4C8DFF; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #EDEFF1; font-weight: 600; font-size: 13px; }
+        input, select { width: 100%; padding: 12px; background: #1D2226; border: 1px solid #2B3136; border-radius: 8px; color: #EDEFF1; font-size: 14px; }
+        button { padding: 12px 24px; background: linear-gradient(135deg, #4C8DFF, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        button:hover { opacity: 0.9; }
+        .filter-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-group input, .filter-group select { flex: 1; min-width: 150px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">⚙️</div>
+                <div class="logo-text"><h1>ADMIN</h1></div>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><div class="nav-link active" onclick="admin.showSection('dashboard')">📊 Dashboard</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="admin.showSection('vendedores')">👥 Vendedores</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="admin.showSection('ventas')">💰 Todas las Ventas</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="admin.showSection('comisiones')">🎯 Comisiones</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="admin.showSection('registrar')">➕ Registrar Vendedor</div></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h2 id="section-title">Dashboard Administrativo</h2>
+                <button onclick="admin.logout()">Salir</button>
+            </header>
+
+            <div class="content">
+                <!-- DASHBOARD -->
+                <div id="dashboard" class="section active">
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-title">Total Vendedores</div>
+                            <div class="card-value" id="total-vendedores">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Ventas Este Mes</div>
+                            <div class="card-value" id="total-ventas">$0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Fondo KAFEL Este Mes</div>
+                            <div class="card-value" id="fondo-kafel">$0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Comisiones Pagadas</div>
+                            <div class="card-value" id="comisiones-pagadas">$0</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Top Vendedores Este Mes</div>
+                        <div id="top-vendedores" class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>Vendedor</th><th>Ventas</th><th>Monto Total</th><th>Comisión</th></tr>
+                                </thead>
+                                <tbody id="top-tbody">
+                                    <tr><td colspan="4" style="text-align: center; color: #9AA3AB;">Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Distribución de Ventas (Física vs Digital)</div>
+                        <div class="stats-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="stat-box">
+                                <div class="stat-label">Ventas Físicas</div>
+                                <div class="stat-value" id="stat-fisica">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Ventas Digitales</div>
+                                <div class="stat-value" id="stat-digital">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VENDEDORES -->
+                <div id="vendedores" class="section">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Referidor</th>
+                                    <th>Total Ventas</th>
+                                    <th>Comisión Total</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendedores-tbody">
+                                <tr><td colspan="7" style="text-align: center; color: #9AA3AB;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VENTAS -->
+                <div id="ventas" class="section">
+                    <div class="filter-group">
+                        <input type="date" id="filter-fecha-desde" placeholder="Desde">
+                        <input type="date" id="filter-fecha-hasta" placeholder="Hasta">
+                        <select id="filter-tipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="fisica">Física</option>
+                            <option value="digital">Digital</option>
+                        </select>
+                        <button onclick="admin.cargarVentas()">Filtrar</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Vendedor</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Tipo</th>
+                                    <th>Comisión</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ventas-tbody">
+                                <tr><td colspan="7" style="text-align: center; color: #9AA3AB;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- COMISIONES -->
+                <div id="comisiones" class="section">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vendedor</th>
+                                    <th>Concepto</th>
+                                    <th>Porcentaje</th>
+                                    <th>Monto</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comisiones-tbody">
+                                <tr><td colspan="6" style="text-align: center; color: #9AA3AB;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- REGISTRAR VENDEDOR -->
+                <div id="registrar" class="section">
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">Registrar Nuevo Vendedor</h3>
+                        <div id="message-registro"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Nombre</label>
+                                <input type="text" id="reg-nombre" placeholder="Ej: Juan García">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="reg-email" placeholder="ejemplo@correo.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="tel" id="reg-telefono" placeholder="3001234567">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Vendedor Referidor (Opcional)</label>
+                                <select id="reg-referidor">
+                                    <option value="">Sin referidor</option>
+                                    <option value="">Cargando...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="admin.registrarVendedor()" style="width: 100%;">Registrar Vendedor</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wmjmsdofvmhfnqkzmbsx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtam1zZG9mdm1oZm5xa3ptYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MTI4NTgsImV4cCI6MjAxNjA4Njg1OH0.k2gHWFajpPxqVJvQ3DBW0OBbmRZA1h3wSP-BXQNJ7B8';
+
+        const admin = {
+            supabase: null,
+
+            init() {
+                this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                this.cargarDashboard();
+                this.cargarSelectReferidores();
+            },
+
+            async cargarDashboard() {
+                try {
+                    const { data: vendedores } = await this.supabase.from('vendedores').select('*');
+                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*');
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*');
+
+                    document.getElementById('total-vendedores').textContent = (vendedores || []).length;
+
+                    const mesActual = new Date().toISOString().substring(0, 7);
+                    const ventasMes = (ventas || []).filter(v => v.fecha_venta.substring(0, 7) === mesActual);
+                    const totalVentas = ventasMes.reduce((sum, v) => sum + v.monto_total, 0);
+                    document.getElementById('total-ventas').textContent = '$' + totalVentas.toLocaleString('es-CO');
+
+                    const fondoKafel = ventasMes.reduce((sum, v) => {
+                        const porcentaje = v.tipo_venta === 'fisica' ? 0.30 : 0.20;
+                        return sum + (v.monto_total * porcentaje);
+                    }, 0);
+                    document.getElementById('fondo-kafel').textContent = '$' + Math.round(fondoKafel).toLocaleString('es-CO');
+
+                    const comisionesMes = (comisiones || []).filter(c => c.created_at.substring(0, 7) === mesActual);
+                    const totalComisiones = comisionesMes.reduce((sum, c) => sum + c.monto, 0);
+                    document.getElementById('comisiones-pagadas').textContent = '$' + totalComisiones.toLocaleString('es-CO');
+
+                    this.cargarTopVendedores(vendedores, ventas, comisiones, mesActual);
+                    this.cargarDistribucion(ventasMes);
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            cargarTopVendedores(vendedores, ventas, comisiones, mesActual) {
+                const ventasPorVendedor = {};
+                (ventas || []).forEach(v => {
+                    if (v.fecha_venta.substring(0, 7) === mesActual) {
+                        if (!ventasPorVendedor[v.vendedor_id]) {
+                            ventasPorVendedor[v.vendedor_id] = { count: 0, monto: 0, comision: 0 };
+                        }
+                        ventasPorVendedor[v.vendedor_id].count += 1;
+                        ventasPorVendedor[v.vendedor_id].monto += v.monto_total;
+                    }
+                });
+
+                (comisiones || []).forEach(c => {
+                    if (c.created_at.substring(0, 7) === mesActual && ventasPorVendedor[c.vendedor_id]) {
+                        ventasPorVendedor[c.vendedor_id].comision += c.monto;
+                    }
+                });
+
+                const ranking = Object.entries(ventasPorVendedor).map(([id, data]) => {
+                    const vendedor = (vendedores || []).find(v => v.id === id);
+                    return { ...data, nombre: vendedor?.nombre || 'Desconocido' };
+                }).sort((a, b) => b.monto - a.monto).slice(0, 5);
+
+                const tbody = document.getElementById('top-tbody');
+                tbody.innerHTML = '';
+                ranking.forEach(v => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${v.nombre}</td>
+                            <td>${v.count}</td>
+                            <td>$${v.monto.toLocaleString('es-CO')}</td>
+                            <td>$${Math.round(v.comision).toLocaleString('es-CO')}</td>
+                        </tr>
+                    `;
+                });
+            },
+
+            cargarDistribucion(ventasMes) {
+                const fisica = ventasMes.filter(v => v.tipo_venta === 'fisica').length;
+                const digital = ventasMes.filter(v => v.tipo_venta === 'digital').length;
+                document.getElementById('stat-fisica').textContent = fisica;
+                document.getElementById('stat-digital').textContent = digital;
+            },
+
+            showSection(sectionId) {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById('section-title').textContent = event.target.textContent;
+
+                if (sectionId === 'vendedores') this.cargarVendedores();
+                if (sectionId === 'ventas') this.cargarVentas();
+                if (sectionId === 'comisiones') this.cargarComisiones();
+            },
+
+            async cargarVendedores() {
+                try {
+                    const { data: vendedores } = await this.supabase.from('vendedores').select('*').eq('rol', 'vendedor');
+                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*');
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*');
+
+                    const tbody = document.getElementById('vendedores-tbody');
+                    tbody.innerHTML = '';
+
+                    for (const v of (vendedores || [])) {
+                        const ventasVendedor = (ventas || []).filter(vn => vn.vendedor_id === v.id).length;
+                        const comisionVendedor = (comisiones || []).filter(c => c.vendedor_id === v.id).reduce((sum, c) => sum + c.monto, 0);
+                        const referidor = v.vendedor_referidor_id ? (vendedores || []).find(x => x.id === v.vendedor_referidor_id)?.nombre : '-';
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${v.nombre}</td>
+                                <td>${v.email || '-'}</td>
+                                <td>${v.telefono || '-'}</td>
+                                <td>${referidor}</td>
+                                <td>${ventasVendedor}</td>
+                                <td>$${Math.round(comisionVendedor).toLocaleString('es-CO')}</td>
+                                <td><span class="badge">${v.estado}</span></td>
+                            </tr>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            async cargarVentas() {
+                try {
+                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*').order('fecha_venta', { ascending: false });
+                    const { data: vendedores } = await this.supabase.from('vendedores').select('*');
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*');
+
+                    const tbody = document.getElementById('ventas-tbody');
+                    tbody.innerHTML = '';
+
+                    for (const v of (ventas || [])) {
+                        const vendedor = (vendedores || []).find(vn => vn.id === v.vendedor_id);
+                        const comisionVenta = (comisiones || []).filter(c => c.venta_id === v.id).reduce((sum, c) => sum + c.monto, 0);
+                        const fecha = new Date(v.fecha_venta).toLocaleDateString('es-CO');
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${fecha}</td>
+                                <td>${vendedor?.nombre || 'Desconocido'}</td>
+                                <td>${v.cliente_nombre}</td>
+                                <td>$${v.monto_total.toLocaleString('es-CO')}</td>
+                                <td><span class="badge ${v.tipo_venta}">${v.tipo_venta === 'fisica' ? 'Física' : 'Digital'}</span></td>
+                                <td>$${Math.round(comisionVenta).toLocaleString('es-CO')}</td>
+                                <td>${v.pagado ? 'Pagada' : 'Pendiente'}</td>
+                            </tr>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            async cargarComisiones() {
+                try {
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*').order('created_at', { ascending: false });
+                    const { data: vendedores } = await this.supabase.from('vendedores').select('*');
+
+                    const tbody = document.getElementById('comisiones-tbody');
+                    tbody.innerHTML = '';
+
+                    for (const c of (comisiones || [])) {
+                        const vendedor = (vendedores || []).find(v => v.id === c.vendedor_id);
+                        const fecha = new Date(c.created_at).toLocaleDateString('es-CO');
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${vendedor?.nombre || 'Desconocido'}</td>
+                                <td>${c.concepto}</td>
+                                <td>${c.porcentaje}%</td>
+                                <td>$${Math.round(c.monto).toLocaleString('es-CO')}</td>
+                                <td>${c.tipo_comision}</td>
+                                <td>${fecha}</td>
+                            </tr>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            async cargarSelectReferidores() {
+                try {
+                    const { data: vendedores } = await this.supabase.from('vendedores').select('id, nombre').eq('rol', 'vendedor').order('nombre');
+                    const select = document.getElementById('reg-referidor');
+                    select.innerHTML = '<option value="">Sin referidor</option>';
+                    (vendedores || []).forEach(v => {
+                        select.innerHTML += `<option value="${v.id}">${v.nombre}</option>`;
+                    });
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            async registrarVendedor() {
+                const nombre = document.getElementById('reg-nombre').value;
+                const email = document.getElementById('reg-email').value;
+                const telefono = document.getElementById('reg-telefono').value;
+                const referidor = document.getElementById('reg-referidor').value || null;
+
+                if (!nombre) {
+                    alert('El nombre es obligatorio');
+                    return;
+                }
+
+                try {
+                    const { error } = await this.supabase.from('vendedores').insert([{
+                        nombre,
+                        email: email || null,
+                        telefono: telefono || null,
+                        rol: 'vendedor',
+                        vendedor_referidor_id: referidor,
+                        nivel_comision: 1,
+                        comision_base: 0.25,
+                        estado: 'activo'
+                    }]);
+
+                    if (error) throw error;
+
+                    alert('✅ Vendedor registrado exitosamente');
+                    document.getElementById('reg-nombre').value = '';
+                    document.getElementById('reg-email').value = '';
+                    document.getElementById('reg-telefono').value = '';
+                    document.getElementById('reg-referidor').value = '';
+                    this.cargarSelectReferidores();
+                    this.cargarDashboard();
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            },
+
+            logout() {
+                if (confirm('¿Seguro que deseas salir?')) {
+                    window.location.href = '/';
+                }
+            }
+        };
+
+        admin.init();
+    </script>
+</body>
+</html>
