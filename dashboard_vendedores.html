@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAFEL - Dashboard de Vendedores</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0D0F; color: #EDEFF1; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(135deg, #001a4d 0%, #00264d 100%); padding: 30px 20px; overflow-y: auto; }
+        .logo { display: flex; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .logo-icon { width: 50px; height: 50px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 24px; color: #001a4d; }
+        .logo-text h1 { font-size: 24px; font-weight: 700; color: white; }
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 10px; }
+        .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); border-left: 3px solid #4C8DFF; color: white; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #14171A; padding: 20px 30px; border-bottom: 1px solid #2B3136; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 24px; color: #4C8DFF; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-badge { background: #1D2226; border: 1px solid #4C8DFF; border-radius: 20px; padding: 8px 16px; font-size: 13px; color: #4C8DFF; }
+        .content { flex: 1; overflow-y: auto; padding: 30px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card-title { font-size: 14px; color: #9AA3AB; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-value { font-size: 28px; font-weight: 700; color: #4C8DFF; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #EDEFF1; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 12px; background: #1D2226; border: 1px solid #2B3136; border-radius: 8px; color: #EDEFF1; font-size: 14px; }
+        input:focus, select:focus { border-color: #4C8DFF; outline: none; }
+        button { padding: 12px 24px; background: linear-gradient(135deg, #4C8DFF, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .table-container { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+        table { width: 100%; }
+        th { background: #1D2226; padding: 15px; text-align: left; font-weight: 600; color: #9AA3AB; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 15px; border-bottom: 1px solid #2B3136; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge.fisica { background: #E8F5E9; color: #2E7D32; }
+        .badge.digital { background: #E3F2FD; color: #1976D2; }
+        .badge.activo { background: #C8E6C9; color: #2E7D32; }
+        .notification { position: fixed; top: 20px; right: 20px; background: #14171A; border: 1px solid #4C8DFF; padding: 15px 20px; border-radius: 8px; z-index: 2000; animation: slideIn 0.3s ease; max-width: 300px; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .stat-box { background: #1D2226; border: 1px solid #2B3136; border-radius: 10px; padding: 15px; text-align: center; }
+        .stat-label { font-size: 11px; color: #9AA3AB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #4C8DFF; }
+        .comision-break { background: #1D2226; border-radius: 10px; padding: 15px; margin: 10px 0; border-left: 4px solid #4C8DFF; }
+        .comision-break div { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
+        .button-group { display: flex; gap: 10px; margin-top: 20px; }
+        .button-group button { flex: 1; }
+        .error { background: #FFCDD2; color: #C62828; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .success { background: #C8E6C9; color: #2E7D32; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">☕</div>
+                <div class="logo-text"><h1>KAFEL</h1></div>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><div class="nav-link active" onclick="app.showSection('dashboard')">📊 Dashboard</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('registrar-venta')">💰 Registrar Venta</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('mis-ventas')">📋 Mis Ventas</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('comisiones')">🎯 Comisiones</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('mi-equipo')">👥 Mi Equipo</div></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h2 id="section-title">Dashboard</h2>
+                <div class="user-info">
+                    <span class="user-badge" id="vendedor-name">Cargando...</span>
+                    <button onclick="app.logout()">Salir</button>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- DASHBOARD -->
+                <div id="dashboard" class="section active">
+                    <div id="message-dashboard"></div>
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-title">Ventas Este Mes</div>
+                            <div class="card-value" id="total-ventas-mes">$0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Mi Comisión</div>
+                            <div class="card-value" id="mi-comision">$0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Número de Ventas</div>
+                            <div class="card-value" id="num-ventas">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Comisión de Equipo</div>
+                            <div class="card-value" id="comision-equipo">$0</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Desglose de Comisiones Este Mes</div>
+                        <div id="comisiones-desglose"></div>
+                    </div>
+                </div>
+
+                <!-- REGISTRAR VENTA -->
+                <div id="registrar-venta" class="section">
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">📝 Nueva Venta</h3>
+                        <div id="message-registro"></div>
+
+                        <div class="form-group">
+                            <label>Nombre del Cliente</label>
+                            <input type="text" id="cliente-nombre" placeholder="Ej: Juan Pérez">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Teléfono del Cliente</label>
+                            <input type="tel" id="cliente-telefono" placeholder="Ej: 3001234567">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Monto Total</label>
+                                <input type="number" id="venta-monto" placeholder="0" step="1000">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tipo de Venta</label>
+                                <select id="venta-tipo">
+                                    <option value="fisica">Física (Presencial)</option>
+                                    <option value="digital">Digital</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Programador Responsable (opcional)</label>
+                            <select id="venta-programador">
+                                <option value="">Sin asignar</option>
+                                <option value="miguel">Miguel (Principal)</option>
+                            </select>
+                        </div>
+
+                        <div id="preview-comisiones" class="comision-break" style="display: none;">
+                            <div class="card-title">Vista Previa de Comisiones</div>
+                            <div id="preview-content"></div>
+                        </div>
+
+                        <button onclick="app.registrarVenta()" style="width: 100%; margin-top: 20px;">Registrar Venta</button>
+                    </div>
+                </div>
+
+                <!-- MIS VENTAS -->
+                <div id="mis-ventas" class="section">
+                    <div id="message-ventas"></div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Tipo</th>
+                                    <th>Mi Comisión</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ventas-tbody">
+                                <tr><td colspan="6" style="text-align: center; color: #9AA3AB;">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- COMISIONES -->
+                <div id="comisiones" class="section">
+                    <div id="message-comisiones"></div>
+                    <div class="card">
+                        <div class="card-title">Resumen de Comisiones</div>
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Base (Este Mes)</div>
+                                <div class="stat-value" id="comision-base">$0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Referidos</div>
+                                <div class="stat-value" id="comision-referidos">$0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Comisión Total Acumulada</div>
+                                <div class="stat-value" id="comision-acumulada">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Desglose Detallado</div>
+                        <div id="comisiones-detallado"></div>
+                    </div>
+                </div>
+
+                <!-- MI EQUIPO -->
+                <div id="mi-equipo" class="section">
+                    <div id="message-equipo"></div>
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">Mi Equipo de Vendedores</h3>
+                        <div id="equipo-content">
+                            <p style="color: #9AA3AB;">No tienes vendedores referidos aún.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wmjmsdofvmhfnqkzmbsx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtam1zZG9mdm1oZm5xa3ptYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MTI4NTgsImV4cCI6MjAxNjA4Njg1OH0.k2gHWFajpPxqVJvQ3DBW0OBbmRZA1h3wSP-BXQNJ7B8';
+
+        const app = {
+            supabase: null,
+            currentVendedor: null,
+
+            init() {
+                this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                this.checkLogin();
+            },
+
+            checkLogin() {
+                const vendedorId = localStorage.getItem('kafel_vendedor_id');
+                if (!vendedorId) {
+                    this.showLoginScreen();
+                } else {
+                    this.cargarVendedor(vendedorId);
+                }
+            },
+
+            async cargarVendedor(vendedorId) {
+                try {
+                    const { data } = await this.supabase.from('vendedores').select('*').eq('id', vendedorId).single();
+                    if (data) {
+                        this.currentVendedor = data;
+                        document.getElementById('vendedor-name').textContent = data.nombre;
+                        this.cargarDashboard();
+                    }
+                } catch (error) {
+                    console.error('Error cargando vendedor:', error);
+                    this.showLoginScreen();
+                }
+            },
+
+            showLoginScreen() {
+                document.body.innerHTML = `
+                    <div style="min-height: 100vh; background: linear-gradient(135deg, #001a4d 0%, #00264d 100%); display: flex; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 40px; max-width: 400px; width: 100%;">
+                            <h1 style="color: #4C8DFF; margin-bottom: 30px; text-align: center;">KAFEL Dashboard</h1>
+                            <div id="login-msg" style="margin-bottom: 20px;"></div>
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 8px; color: #EDEFF1; font-weight: 600;">Selecciona tu Usuario</label>
+                                <select id="select-vendedor" style="width: 100%; padding: 12px; background: #1D2226; border: 1px solid #2B3136; border-radius: 8px; color: #EDEFF1;">
+                                    <option value="">Cargando vendedores...</option>
+                                </select>
+                            </div>
+                            <button onclick="app.loginVendedor()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #4C8DFF, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Iniciar Sesión</button>
+                        </div>
+                    </div>
+                `;
+                this.cargarVendedoresLogin();
+            },
+
+            async cargarVendedoresLogin() {
+                try {
+                    const { data } = await this.supabase.from('vendedores').select('id, nombre').eq('rol', 'vendedor').order('nombre');
+                    const select = document.getElementById('select-vendedor');
+                    select.innerHTML = '<option value="">Selecciona un vendedor</option>';
+                    (data || []).forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.id;
+                        option.textContent = v.nombre;
+                        select.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error cargando vendedores:', error);
+                }
+            },
+
+            loginVendedor() {
+                const vendedorId = document.getElementById('select-vendedor').value;
+                if (!vendedorId) {
+                    alert('Por favor selecciona un vendedor');
+                    return;
+                }
+                localStorage.setItem('kafel_vendedor_id', vendedorId);
+                window.location.reload();
+            },
+
+            logout() {
+                localStorage.removeItem('kafel_vendedor_id');
+                window.location.reload();
+            },
+
+            showSection(sectionId) {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById('section-title').textContent = event.target.textContent;
+
+                if (sectionId === 'mis-ventas') this.cargarMisVentas();
+                if (sectionId === 'comisiones') this.cargarComisiones();
+                if (sectionId === 'mi-equipo') this.cargarMiEquipo();
+            },
+
+            async cargarDashboard() {
+                try {
+                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', this.currentVendedor.id);
+
+                    const ahora = new Date();
+                    const mesActual = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0');
+
+                    const ventasEsteMes = (ventas || []).filter(v => v.fecha_venta.substring(0, 7) === mesActual);
+                    const totalVentas = ventasEsteMes.reduce((sum, v) => sum + v.monto_total, 0);
+
+                    document.getElementById('total-ventas-mes').textContent = '$' + totalVentas.toLocaleString('es-CO');
+                    document.getElementById('num-ventas').textContent = ventasEsteMes.length;
+
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id);
+                    const comisionEsteMes = (comisiones || []).filter(c => c.created_at.substring(0, 7) === mesActual).reduce((sum, c) => sum + c.monto, 0);
+                    document.getElementById('mi-comision').textContent = '$' + comisionEsteMes.toLocaleString('es-CO');
+
+                    const { data: referidos } = await this.supabase.from('vendedores').select('*').eq('vendedor_referidor_id', this.currentVendedor.id);
+                    const comisionReferidos = (comisiones || []).filter(c => referidos && referidos.map(r => r.id).includes(c.vendedor_id) && c.tipo_comision === 'referido' && c.created_at.substring(0, 7) === mesActual).reduce((sum, c) => sum + c.monto, 0);
+                    document.getElementById('comision-equipo').textContent = '$' + comisionReferidos.toLocaleString('es-CO');
+
+                    this.cargarDesglose(comisiones, mesActual);
+                } catch (error) {
+                    console.error('Error cargando dashboard:', error);
+                }
+            },
+
+            cargarDesglose(comisiones, mesActual) {
+                const comisionesMes = (comisiones || []).filter(c => c.created_at.substring(0, 7) === mesActual);
+                const desglose = {};
+                comisionesMes.forEach(c => {
+                    desglose[c.concepto] = (desglose[c.concepto] || 0) + c.monto;
+                });
+
+                let html = '';
+                Object.entries(desglose).forEach(([concepto, monto]) => {
+                    html += `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2B3136;">
+                        <span>${concepto}</span>
+                        <strong>$${monto.toLocaleString('es-CO')}</strong>
+                    </div>`;
+                });
+
+                document.getElementById('comisiones-desglose').innerHTML = html || '<p style="color: #9AA3AB;">Sin comisiones este mes</p>';
+            },
+
+            async cargarMisVentas() {
+                try {
+                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', this.currentVendedor.id).order('fecha_venta', { ascending: false });
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id);
+
+                    const tbody = document.getElementById('ventas-tbody');
+                    tbody.innerHTML = '';
+
+                    (ventas || []).forEach(venta => {
+                        const comisionVenta = (comisiones || []).filter(c => c.venta_id === venta.id).reduce((sum, c) => sum + c.monto, 0);
+                        const fecha = new Date(venta.fecha_venta).toLocaleDateString('es-CO');
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${fecha}</td>
+                            <td>${venta.cliente_nombre}</td>
+                            <td>$${venta.monto_total.toLocaleString('es-CO')}</td>
+                            <td><span class="badge ${venta.tipo_venta}">${venta.tipo_venta === 'fisica' ? 'Física' : 'Digital'}</span></td>
+                            <td>$${comisionVenta.toLocaleString('es-CO')}</td>
+                            <td><span class="badge activo">${venta.pagado ? 'Pagada' : 'Pendiente'}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    if (!ventas || ventas.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #9AA3AB;">No tienes ventas registradas</td></tr>';
+                    }
+                } catch (error) {
+                    console.error('Error cargando ventas:', error);
+                }
+            },
+
+            async cargarComisiones() {
+                try {
+                    const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id).order('created_at', { ascending: false });
+
+                    const comisionBase = (comisiones || []).filter(c => c.tipo_comision === 'base').reduce((sum, c) => sum + c.monto, 0);
+                    const comisionReferidos = (comisiones || []).filter(c => c.tipo_comision === 'referido').reduce((sum, c) => sum + c.monto, 0);
+                    const comisionTotal = comisiones.reduce((sum, c) => sum + c.monto, 0);
+
+                    document.getElementById('comision-base').textContent = '$' + comisionBase.toLocaleString('es-CO');
+                    document.getElementById('comision-referidos').textContent = '$' + comisionReferidos.toLocaleString('es-CO');
+                    document.getElementById('comision-acumulada').textContent = '$' + comisionTotal.toLocaleString('es-CO');
+
+                    let html = '<div style="max-height: 400px; overflow-y: auto;">';
+                    (comisiones || []).forEach(c => {
+                        html += `<div class="comision-break">
+                            <div><strong>${c.concepto}</strong> (${c.porcentaje}%)</div>
+                            <div style="color: #4C8DFF;"><strong>$${c.monto.toLocaleString('es-CO')}</strong></div>
+                            <div style="font-size: 11px; color: #9AA3AB;">${new Date(c.created_at).toLocaleDateString('es-CO')}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                    document.getElementById('comisiones-detallado').innerHTML = html;
+                } catch (error) {
+                    console.error('Error cargando comisiones:', error);
+                }
+            },
+
+            async cargarMiEquipo() {
+                try {
+                    const { data: referidos } = await this.supabase.from('vendedores').select('*').eq('vendedor_referidor_id', this.currentVendedor.id);
+
+                    if (!referidos || referidos.length === 0) {
+                        document.getElementById('equipo-content').innerHTML = '<p style="color: #9AA3AB;">No tienes vendedores referidos aún. Cuando refiera un vendedor, verá sus datos aquí.</p>';
+                        return;
+                    }
+
+                    let html = '<div class="table-container"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Nivel Comisión</th><th>Ventas</th></tr></thead><tbody>';
+
+                    for (const referido of referidos) {
+                        const { data: ventasReferido } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', referido.id);
+                        html += `<tr>
+                            <td>${referido.nombre}</td>
+                            <td>${referido.telefono || '-'}</td>
+                            <td>${referido.nivel_comision}</td>
+                            <td>${(ventasReferido || []).length}</td>
+                        </tr>`;
+                    }
+
+                    html += '</tbody></table></div>';
+                    document.getElementById('equipo-content').innerHTML = html;
+                } catch (error) {
+                    console.error('Error cargando equipo:', error);
+                }
+            },
+
+            calcularComisiones(monto, tipoVenta) {
+                const fisica = tipoVenta === 'fisica';
+                return {
+                    operaciones: monto * 0.10,
+                    inversor: monto * 0.05,
+                    fondoKafel: monto * (fisica ? 0.30 : 0.20),
+                    vendedor: monto * this.getPorcentajeVendedor(),
+                    programador: monto * 0.30
+                };
+            },
+
+            getPorcentajeVendedor() {
+                const numVentas = this.currentVendedor.nivel_comision || 1;
+                if (numVentas >= 11) return 0.30;
+                return 0.25;
+            },
+
+            async registrarVenta() {
+                const nombre = document.getElementById('cliente-nombre').value;
+                const telefono = document.getElementById('cliente-telefono').value;
+                const monto = parseFloat(document.getElementById('venta-monto').value);
+                const tipo = document.getElementById('venta-tipo').value;
+                const programador = document.getElementById('venta-programador').value || null;
+
+                if (!nombre || !monto) {
+                    this.showNotification('Completa todos los campos obligatorios', 'error', 'message-registro');
+                    return;
+                }
+
+                try {
+                    const { data: venta, error } = await this.supabase.from('ventas_nuevo').insert([{
+                        vendedor_id: this.currentVendedor.id,
+                        programador_id: programador === 'miguel' ? 'MIGUEL_ID' : null,
+                        cliente_nombre: nombre,
+                        cliente_telefono: telefono,
+                        monto_total: monto,
+                        tipo_venta: tipo
+                    }]).select().single();
+
+                    if (error) throw error;
+
+                    const comisiones = this.calcularComisiones(monto, tipo);
+                    const comisionVendedor = comisiones.vendedor;
+
+                    await this.supabase.from('comisiones').insert([{
+                        venta_id: venta.id,
+                        vendedor_id: this.currentVendedor.id,
+                        concepto: 'Comisión por venta ' + tipo,
+                        monto: comisionVendedor,
+                        porcentaje: this.getPorcentajeVendedor() * 100,
+                        tipo_comision: 'base'
+                    }]);
+
+                    this.showNotification('✅ Venta registrada exitosamente', 'success', 'message-registro');
+                    document.getElementById('cliente-nombre').value = '';
+                    document.getElementById('cliente-telefono').value = '';
+                    document.getElementById('venta-monto').value = '';
+                    this.cargarDashboard();
+                } catch (error) {
+                    console.error('Error registrando venta:', error);
+                    this.showNotification('Error: ' + error.message, 'error', 'message-registro');
+                }
+            },
+
+            showNotification(msg, type, elementId) {
+                const elem = document.getElementById(elementId);
+                if (elem) {
+                    elem.innerHTML = `<div class="${type}">${msg}</div>`;
+                    setTimeout(() => { elem.innerHTML = ''; }, 5000);
+                }
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+</html>
