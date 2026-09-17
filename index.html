@@ -104,6 +104,15 @@
             color: #001a4d;
         }
 
+        .alerts-badge {
+            background: #f44336;
+            color: white;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         .content {
             flex: 1;
             overflow-y: auto;
@@ -193,6 +202,12 @@
             font-weight: 600;
         }
 
+        button.small {
+            padding: 8px 16px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
         .table-responsive {
             background: white;
             border-radius: 12px;
@@ -232,6 +247,8 @@
         .badge.premium { background: #fce4ec; color: #c2185b; }
         .badge.pendiente { background: #ffe0b2; color: #e65100; }
         .badge.confirmado { background: #c8e6c9; color: #2e7d32; }
+        .badge.completado { background: #c8e6c9; color: #2e7d32; }
+        .badge.incumplida { background: #f5f5f5; color: #666; }
 
         .notification {
             position: fixed;
@@ -242,10 +259,17 @@
             border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         .notification.success { border-left: 4px solid #4caf50; }
         .notification.error { border-left: 4px solid #f44336; }
+        .notification.warning { border-left: 4px solid #ff9800; }
 
         .earnings-breakdown {
             background: white;
@@ -266,6 +290,7 @@
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
         .calendar-grid {
@@ -275,18 +300,75 @@
             margin-bottom: 20px;
         }
 
+        .day-header {
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+            padding: 10px;
+        }
+
         .calendar-day {
             aspect-ratio: 1;
-            border: 1px solid #e0e0e0;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             padding: 8px;
             text-align: center;
             cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.05);
         }
 
         .calendar-day.today {
             background: #e3f2fd;
-            font-weight: 600;
+            border-color: #2196f3;
+        }
+
+        .calendar-day.event-red {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+
+        .calendar-day.event-green {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .calendar-day.event-blue {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .calendar-day.event-black {
+            background: #f5f5f5;
+            border-color: #333;
+            color: #333;
+        }
+
+        .calendar-day.event-gray {
+            background: #eeeeee;
+            border-color: #999;
+            color: #999;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
         }
 
         @media (max-width: 768px) {
@@ -311,7 +393,7 @@
                     <li class="nav-item"><div class="nav-link" onclick="showSection('ventas')">💰 Ventas</div></li>
                     <li class="nav-item"><div class="nav-link" onclick="showSection('donaciones')">🤝 Donaciones</div></li>
                     <li class="nav-item"><div class="nav-link" onclick="showSection('ganancias')">📈 Ganancias</div></li>
-                    <li class="nav-item"><div class="nav-link" onclick="showSection('agenda')">📅 Agenda</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="showSection('agenda')">📅 Agenda <span id="agenda-alerts" class="alerts-badge" style="display:none;"></span></div></li>
                 </ul>
             </nav>
         </aside>
@@ -324,6 +406,7 @@
             <div class="content">
                 <!-- DASHBOARD -->
                 <div id="dashboard" class="section active">
+                    <div id="alerts-container"></div>
                     <div class="cards-grid">
                         <div class="card">
                             <div class="card-title">Total Clientes</div>
@@ -380,6 +463,19 @@
 
                 <!-- CLIENTES -->
                 <div id="clientes" class="section">
+                    <div class="form-section">
+                        <h3>Filtrar Clientes</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tipo de Cliente</label>
+                                <select onchange="filtrarClientes(this.value)">
+                                    <option value="">Todos</option>
+                                    <option value="donacion">Donación</option>
+                                    <option value="pago">Pago</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -389,6 +485,7 @@
                                     <th>Teléfono</th>
                                     <th>Tipo</th>
                                     <th>Categoría</th>
+                                    <th>Fecha Registro</th>
                                 </tr>
                             </thead>
                             <tbody id="clientes-tbody"></tbody>
@@ -407,25 +504,26 @@
                             </div>
                             <div class="form-group">
                                 <label>Monto Total</label>
-                                <input type="number" id="monto-venta" step="0.01">
+                                <input type="number" id="monto-venta" step="0.01" onchange="calcularDesglose()">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Tipo de Venta</label>
-                                <select id="tipo-venta">
+                                <select id="tipo-venta" onchange="calcularDesglose()">
                                     <option value="fisica">Venta Física</option>
                                     <option value="digital">Venta Digital</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label>Número de Cuota</label>
-                                <select id="numero-cuota">
+                                <select id="numero-cuota" onchange="calcularDesglose()">
                                     <option value="1">Cuota 1 (40%)</option>
                                     <option value="2">Cuota 2 (60%)</option>
                                 </select>
                             </div>
                         </div>
+                        <div id="desglose-preview" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none;"></div>
                         <button onclick="registrarVenta()">Registrar Venta</button>
                     </div>
                     <div class="table-responsive">
@@ -436,7 +534,9 @@
                                     <th>Monto</th>
                                     <th>Tipo</th>
                                     <th>Cuota</th>
+                                    <th>Estado</th>
                                     <th>Fecha</th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="ventas-tbody"></tbody>
@@ -472,6 +572,10 @@
                             <div class="card-title">Ventas Digitales</div>
                             <div class="card-value" id="digitales-count">0</div>
                         </div>
+                        <div class="card">
+                            <div class="card-title">Ingresos Totales</div>
+                            <div class="card-value" id="ingresos-total">$0</div>
+                        </div>
                     </div>
                     <div class="form-section">
                         <h3>Distribución - Venta Física</h3>
@@ -497,6 +601,7 @@
 
                 <!-- AGENDA -->
                 <div id="agenda" class="section">
+                    <div id="agenda-alerts-section"></div>
                     <div class="calendar">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                             <h3 id="calendar-month">Septiembre 2026</h3>
@@ -505,7 +610,9 @@
                                 <button onclick="nextMonth()">Siguiente →</button>
                             </div>
                         </div>
-                        <div class="calendar-grid" id="calendar-grid"></div>
+                        <div class="calendar-grid" id="calendar-grid">
+                            <!-- Encabezados -->
+                        </div>
                     </div>
                     <div class="form-section">
                         <h3>Agendar Reunión</h3>
@@ -542,7 +649,14 @@
                     <div class="table-responsive">
                         <table>
                             <thead>
-                                <tr><th>Fecha</th><th>Persona</th><th>Tipo</th><th>Estado</th></tr>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Persona</th>
+                                    <th>Tipo</th>
+                                    <th>Teléfono</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
                             </thead>
                             <tbody id="agenda-tbody"></tbody>
                         </table>
@@ -558,7 +672,9 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let clientesFiltrados = [];
+        let agendaFiltrada = [];
         let currentMonth = new Date();
+        let notificationCheckInterval;
 
         async function init() {
             await cargarClientes();
@@ -567,6 +683,7 @@
             await cargarAgenda();
             updateDashboard();
             renderCalendar();
+            iniciarVerificacionAlertas();
         }
 
         function showSection(sectionId) {
@@ -576,6 +693,7 @@
             event.target.closest('.nav-link').classList.add('active');
             const titles = {'dashboard': 'Dashboard', 'clientes': 'Clientes', 'ventas': 'Ventas', 'donaciones': 'Donaciones', 'ganancias': 'Ganancias', 'agenda': 'Agenda'};
             document.getElementById('section-title').textContent = titles[sectionId];
+            if (sectionId === 'agenda') mostrarAlertasAgenda();
         }
 
         function showNotification(message, type = 'success') {
@@ -583,12 +701,53 @@
             notification.className = `notification ${type}`;
             notification.textContent = message;
             document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
+            setTimeout(() => notification.remove(), 4000);
         }
 
         function updateClienteForm() {
             const tipo = document.getElementById('tipo-cliente').value;
             document.getElementById('categoria-container').style.display = tipo === 'pago' ? 'block' : 'none';
+        }
+
+        function calcularDesglose() {
+            const monto = parseFloat(document.getElementById('monto-venta').value);
+            const tipo = document.getElementById('tipo-venta').value;
+            const cuota = parseInt(document.getElementById('numero-cuota').value);
+
+            if (!monto) {
+                document.getElementById('desglose-preview').style.display = 'none';
+                return;
+            }
+
+            const montoReal = cuota === 1 ? monto * 0.4 : monto * 0.6;
+            
+            let desglose = {};
+            if (tipo === 'fisica') {
+                desglose = {
+                    'Gastos Operativos': 0.10,
+                    'Fondo KAFEL': 0.30,
+                    'Vendedor': 0.25,
+                    'Programador': 0.30,
+                    'Inversionistas': 0.05
+                };
+            } else {
+                desglose = {
+                    'Gastos Operativos': 0.05,
+                    'Fondo KAFEL': 0.30,
+                    'Programador': 0.30,
+                    'Vendedor': 0.25,
+                    'Inversionistas': 0.05
+                };
+            }
+
+            let html = `<strong>Desglose para cuota ${cuota} ($${montoReal.toFixed(2)}):</strong><br>`;
+            Object.entries(desglose).forEach(([concepto, porcentaje]) => {
+                const montoParcial = montoReal * porcentaje;
+                html += `${concepto}: $${montoParcial.toFixed(2)}<br>`;
+            });
+
+            document.getElementById('desglose-preview').innerHTML = html;
+            document.getElementById('desglose-preview').style.display = 'block';
         }
 
         async function registrarCliente() {
@@ -617,7 +776,7 @@
                 return;
             }
 
-            showNotification('Cliente registrado exitosamente', 'success');
+            showNotification('✅ Cliente registrado exitosamente', 'success');
             document.getElementById('nombre-encargado').value = '';
             document.getElementById('nombre-empresa').value = '';
             document.getElementById('telefono').value = '';
@@ -640,6 +799,7 @@
             const tbody = document.getElementById('clientes-tbody');
             tbody.innerHTML = '';
             clientesFiltrados.forEach(cliente => {
+                const fecha = new Date(cliente.fecha_registro).toLocaleDateString();
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${cliente.nombre_encargado}</td>
@@ -647,9 +807,21 @@
                     <td>${cliente.telefono}</td>
                     <td><span class="badge ${cliente.tipo}">${cliente.tipo === 'donacion' ? 'Donación' : 'Pago'}</span></td>
                     <td>${cliente.categoria ? `<span class="badge ${cliente.categoria}">${cliente.categoria}</span>` : '-'}</td>
+                    <td>${fecha}</td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function filtrarClientes(tipo) {
+            if (tipo === '') {
+                cargarClientes();
+            } else {
+                supabase.from('clientes').select('*').eq('tipo', tipo).then(({ data }) => {
+                    clientesFiltrados = data || [];
+                    renderClientes();
+                });
+            }
         }
 
         function updateClienteSelect() {
@@ -689,7 +861,11 @@
                 return;
             }
 
-            showNotification('Venta registrada exitosamente', 'success');
+            showNotification('✅ Venta registrada - Pendiente de confirmación', 'success');
+            document.getElementById('cliente-venta').value = '';
+            document.getElementById('monto-venta').value = '';
+            document.getElementById('numero-cuota').value = '1';
+            document.getElementById('desglose-preview').style.display = 'none';
             await cargarVentas();
             updateDashboard();
         }
@@ -706,11 +882,24 @@
                     <td>${venta.clientes.nombre_encargado}</td>
                     <td>$${venta.monto_total.toFixed(2)}</td>
                     <td><span class="badge">${venta.tipo_venta === 'fisica' ? 'Física' : 'Digital'}</span></td>
-                    <td>Cuota ${venta.numero_cuota} (${venta.numero_cuota === 1 ? '40%' : '60%'})</td>
+                    <td>Cuota ${venta.numero_cuota}</td>
+                    <td><span class="badge ${venta.estado}">${venta.estado === 'pendiente' ? 'Pendiente' : 'Confirmado'}</span></td>
                     <td>${fecha}</td>
+                    <td>${venta.estado === 'pendiente' ? `<button class="small" onclick="confirmarVenta(${venta.id})">Confirmar</button>` : '✓'}</td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        async function confirmarVenta(id) {
+            const { error } = await supabase.from('ventas').update({ estado: 'confirmado' }).eq('id', id);
+            if (error) {
+                showNotification('Error al confirmar venta', 'error');
+                return;
+            }
+            showNotification('✅ Venta confirmada', 'success');
+            await cargarVentas();
+            updateDashboard();
         }
 
         async function cargarDonaciones() {
@@ -744,6 +933,7 @@
             document.getElementById('kafel-earnings').textContent = `$${gananciasKAFEL.toFixed(2)}`;
             document.getElementById('fisicas-count').textContent = (ventasF || []).length;
             document.getElementById('digitales-count').textContent = (ventasD || []).length;
+            document.getElementById('ingresos-total').textContent = `$${totalVentas.toFixed(2)}`;
         }
 
         function renderCalendar() {
@@ -763,8 +953,7 @@
             const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             days.forEach(day => {
                 const header = document.createElement('div');
-                header.style.textAlign = 'center';
-                header.style.fontWeight = '600';
+                header.className = 'day-header';
                 header.textContent = day;
                 grid.appendChild(header);
             });
@@ -773,8 +962,28 @@
             while (currentDate <= lastDay || grid.children.length < 49) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
-                if (currentDate.getMonth() !== month) dayDiv.style.opacity = '0.3';
-                if (currentDate.toDateString() === new Date().toDateString()) dayDiv.classList.add('today');
+                
+                if (currentDate.getMonth() !== month) {
+                    dayDiv.classList.add('other-month');
+                }
+
+                if (currentDate.toDateString() === new Date().toDateString()) {
+                    dayDiv.classList.add('today');
+                }
+
+                const evento = agendaFiltrada.find(e => new Date(e.fecha_hora).toDateString() === currentDate.toDateString());
+                if (evento) {
+                    if (evento.estado === 'incumplida') {
+                        dayDiv.classList.add('event-gray');
+                    } else if (evento.estado === 'completado') {
+                        dayDiv.classList.add('event-black');
+                    } else {
+                        if (evento.tipo_reunion === 'contratacion') dayDiv.classList.add('event-red');
+                        else if (evento.tipo_reunion === 'presencial') dayDiv.classList.add('event-green');
+                        else if (evento.tipo_reunion === 'virtual') dayDiv.classList.add('event-blue');
+                    }
+                }
+
                 dayDiv.textContent = currentDate.getDate();
                 grid.appendChild(dayDiv);
                 currentDate.setDate(currentDate.getDate() + 1);
@@ -818,7 +1027,7 @@
                 return;
             }
 
-            showNotification('Reunión agendada exitosamente', 'success');
+            showNotification('✅ Reunión agendada - Recibirás alertas 30 min antes', 'success');
             document.getElementById('tipo-reunion').value = '';
             document.getElementById('fecha-reunion').value = '';
             document.getElementById('nombre-reunion').value = '';
@@ -826,25 +1035,114 @@
             document.getElementById('resumen-reunion').value = '';
 
             await cargarAgenda();
+            renderCalendar();
         }
 
         async function cargarAgenda() {
             const { data, error } = await supabase.from('agenda').select('*').order('fecha_hora', { ascending: true });
             if (error) { showNotification('Error al cargar agenda', 'error'); return; }
+            agendaFiltrada = data || [];
+            renderAgenda();
+            renderCalendar();
+        }
+
+        function renderAgenda() {
             const tbody = document.getElementById('agenda-tbody');
             tbody.innerHTML = '';
-            (data || []).forEach(evento => {
-                const fecha = new Date(evento.fecha_hora).toLocaleDateString();
-                const hora = new Date(evento.fecha_hora).toLocaleTimeString();
+            (agendaFiltrada || []).forEach(evento => {
+                const fecha = new Date(evento.fecha_hora);
+                const fechaStr = fecha.toLocaleDateString();
+                const horaStr = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${fecha} ${hora}</td>
+                    <td>${fechaStr} ${horaStr}</td>
                     <td>${evento.nombre_persona}</td>
-                    <td><span class="badge">${evento.tipo_reunion === 'contratacion' ? 'Contratación' : evento.tipo_reunion === 'presencial' ? 'Presencial' : 'Virtual'}</span></td>
-                    <td><span class="badge ${evento.estado}">${evento.estado}</span></td>
+                    <td><span class="badge">${evento.tipo_reunion === 'contratacion' ? '🔴 Contratación' : evento.tipo_reunion === 'presencial' ? '🟢 Presencial' : '🔵 Virtual'}</span></td>
+                    <td>${evento.telefono}</td>
+                    <td><span class="badge ${evento.estado}">${evento.estado === 'completado' ? '✓ Completado' : evento.estado === 'incumplida' ? '✗ Incumplida' : '⏳ Pendiente'}</span></td>
+                    <td>
+                        ${evento.estado === 'pendiente' ? `<button class="small" onclick="completarReunion(${evento.id})">✓ Completar</button><button class="small" onclick="incumplirReunion(${evento.id})">✗ Incumplida</button>` : ''}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        async function completarReunion(id) {
+            const { error } = await supabase.from('agenda').update({ estado: 'completado' }).eq('id', id);
+            if (error) { showNotification('Error', 'error'); return; }
+            showNotification('✅ Reunión marcada como completada', 'success');
+            await cargarAgenda();
+        }
+
+        async function incumplirReunion(id) {
+            const { error } = await supabase.from('agenda').update({ estado: 'incumplida' }).eq('id', id);
+            if (error) { showNotification('Error', 'error'); return; }
+            showNotification('⚠️ Reunión marcada como incumplida', 'warning');
+            await cargarAgenda();
+        }
+
+        function iniciarVerificacionAlertas() {
+            setInterval(verificarAlertas, 60000); // Cada minuto
+            verificarAlertas(); // Primera verificación inmediata
+        }
+
+        function verificarAlertas() {
+            const ahora = new Date();
+            let alertasPendientes = 0;
+
+            (agendaFiltrada || []).forEach(evento => {
+                const fechaReunion = new Date(evento.fecha_hora);
+                const minutosFalta = (fechaReunion - ahora) / (1000 * 60);
+                const minutosPasados = (ahora - fechaReunion) / (1000 * 60);
+
+                // Alerta 30 minutos antes
+                if (minutosFalta > 0 && minutosFalta <= 30 && evento.estado === 'pendiente') {
+                    alertasPendientes++;
+                    if (minutosFalta < 1) {
+                        showNotification(`🔔 AHORA: Reunión con ${evento.nombre_persona} (${evento.tipo_reunion})`, 'warning');
+                    }
+                }
+
+                // Marcar como incumplida si pasó 1 hora
+                if (minutosPasados > 60 && evento.estado === 'pendiente') {
+                    supabase.from('agenda').update({ estado: 'incumplida' }).eq('id', evento.id).then(() => {
+                        cargarAgenda();
+                    });
+                    alertasPendientes++;
+                    showNotification(`⚠️ Reunión con ${evento.nombre_persona} no completada`, 'warning');
+                }
+            });
+
+            // Actualizar badge de alertas
+            const badge = document.getElementById('agenda-alerts');
+            if (alertasPendientes > 0) {
+                badge.textContent = alertasPendientes;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function mostrarAlertasAgenda() {
+            const container = document.getElementById('agenda-alerts-section');
+            container.innerHTML = '';
+            const ahora = new Date();
+
+            const urgentes = (agendaFiltrada || []).filter(e => {
+                const minutosFalta = (new Date(e.fecha_hora) - ahora) / (1000 * 60);
+                return minutosFalta > 0 && minutosFalta <= 30 && e.estado === 'pendiente';
+            });
+
+            if (urgentes.length > 0) {
+                let html = '<div class="alert-box">🔔 <strong>Reuniones próximas (próximos 30 min):</strong><br>';
+                urgentes.forEach(e => {
+                    const hora = new Date(e.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    html += `📅 ${hora} - ${e.nombre_persona} (${e.tipo_reunion})<br>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
         }
 
         init();
