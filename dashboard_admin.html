@@ -853,7 +853,13 @@
         const SUPABASE_URL = 'https://vkagxzxthfwxmfcwlvrr.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrYWd4enh0aGZ3eG1mY3dsdnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MDA5NDcsImV4cCI6MjEwNTI3Njk0N30.iCb1cVtFoSE7KtuNagJls8nrU4lNI_vR7gkNXecNPkc';
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('✅ Supabase inicializado correctamente');
+        } catch (error) {
+            console.error('❌ Error inicializando Supabase:', error);
+        }
 
         // ═══════════════════════════════════════════════════════
         // VARIABLES GLOBALES
@@ -866,20 +872,63 @@
         // ═══════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Dashboard KAFEL cargando...');
-            await verificarConexion();
+
+            // Esperar a que Supabase esté disponible
+            let intentos = 0;
+            while (!window.supabase && intentos < 10) {
+                console.log('⏳ Esperando Supabase...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                intentos++;
+            }
+
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+
+            const conectado = await verificarConexion();
             inicializarNavegacion();
-            await cargarDatos();
+
+            if (conectado) {
+                await cargarDatos();
+            } else {
+                console.error('⚠️ No se pudo conectar a Supabase. Verifica la consola.');
+            }
         });
 
         async function verificarConexion() {
             try {
-                const { data, error } = await supabase.from('vendedores').select('count()', { count: 'exact' }).limit(0);
-                if (error) throw error;
-                console.log('✅ Conectado a Supabase');
+                if (!supabase) {
+                    throw new Error('Supabase no está inicializado');
+                }
+
+                console.log('🔍 Probando conexión a Supabase...');
+                console.log('URL:', SUPABASE_URL);
+                console.log('Key presente:', !!SUPABASE_KEY);
+
+                const { data, error } = await supabase
+                    .from('vendedores')
+                    .select('id')
+                    .limit(1);
+
+                if (error) {
+                    console.error('❌ Error Supabase:', error);
+                    throw error;
+                }
+
+                console.log('✅ Conectado a Supabase exitosamente');
+                console.log('Datos recibidos:', data);
                 document.getElementById('user-info').textContent = '✅ Conectado';
+                return true;
+
             } catch (error) {
-                console.error('❌ Error de conexión:', error);
-                document.getElementById('user-info').textContent = '❌ Error de conexión';
+                console.error('❌ Error de conexión completo:', {
+                    message: error.message,
+                    code: error.code,
+                    status: error.status,
+                    details: error.details
+                });
+                document.getElementById('user-info').innerHTML = `❌ ${error.message}`;
+                return false;
             }
         }
 
@@ -933,6 +982,12 @@
         // ═══════════════════════════════════════════════════════
         async function cargarDashboard() {
             try {
+                if (!supabase) {
+                    console.error('Supabase no está disponible');
+                    return;
+                }
+
+                console.log('📊 Cargando datos del dashboard...');
                 const mesActual = new Date().toISOString().slice(0, 7);
 
                 // Total vendedores
@@ -941,7 +996,12 @@
                     .select('id')
                     .eq('estado', 'activo');
 
-                if (e1) throw e1;
+                if (e1) {
+                    console.error('Error cargando vendedores:', e1);
+                    throw e1;
+                }
+
+                console.log('✅ Vendedores cargados:', vendedores.length);
                 document.getElementById('total-vendedores').textContent = vendedores.length;
 
                 // Ventas este mes
@@ -1133,12 +1193,23 @@
         // ═══════════════════════════════════════════════════════
         async function cargarVendedores() {
             try {
+                if (!supabase) {
+                    console.error('Supabase no está disponible');
+                    return;
+                }
+
+                console.log('👥 Cargando vendedores...');
                 const { data, error } = await supabase
                     .from('vendedores')
                     .select('*')
                     .order('nombre');
 
-                if (error) throw error;
+                if (error) {
+                    console.error('Error Supabase:', error);
+                    throw error;
+                }
+
+                console.log('✅ Vendedores cargados:', data.length);
                 vendedoresGlobal = data;
 
                 const tbody = document.getElementById('vendedores-tabla');
