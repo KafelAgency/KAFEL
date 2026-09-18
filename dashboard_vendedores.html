@@ -42,6 +42,7 @@
         .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .badge.fisica { background: #E8F5E9; color: #2E7D32; }
         .badge.digital { background: #E3F2FD; color: #1976D2; }
+        .badge.donacion { background: #F3E5F5; color: #7B1FA2; }
         .badge.activo { background: #C8E6C9; color: #2E7D32; }
         .notification { position: fixed; top: 20px; right: 20px; background: #14171A; border: 1px solid #4C8DFF; padding: 15px 20px; border-radius: 8px; z-index: 2000; animation: slideIn 0.3s ease; max-width: 300px; }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -132,7 +133,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label>Monto Total</label>
-                                <input type="number" id="venta-monto" placeholder="0" step="1000">
+                                <input type="number" id="venta-monto" placeholder="0" step="1000" min="0">
                             </div>
 
                             <div class="form-group">
@@ -140,6 +141,7 @@
                                 <select id="venta-tipo">
                                     <option value="fisica">Física (Presencial)</option>
                                     <option value="digital">Digital</option>
+                                    <option value="donacion">Donación</option>
                                 </select>
                             </div>
                         </div>
@@ -148,7 +150,6 @@
                             <label>Programador Responsable (opcional)</label>
                             <select id="venta-programador">
                                 <option value="">Sin asignar</option>
-                                <option value="miguel">Miguel (Principal)</option>
                             </select>
                         </div>
 
@@ -226,11 +227,12 @@
 
     <script>
         const SUPABASE_URL = 'https://wmjmsdofvmhfnqkzmbsx.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtam1zZG9mdm1oZm5xa3ptYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MTI4NTgsImV4cCI6MjAxNjA4Njg1OH0.k2gHWFajpPxqVJvQ3DBW0OBbmRZA1h3wSP-BXQNJ7B8';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indent3BtbXNkb2Z2bWhmbnFremm6ZXR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MTI4NTgsImV4cCI6MjAxNjA4Njg1OH0.k2gHWFajpPxqVJvQ3DBW0OBbmRZA1h3wSP-BXQNJ7B8';
 
         const app = {
             supabase: null,
             currentVendedor: null,
+            programadores: [],
 
             init() {
                 this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -238,7 +240,7 @@
             },
 
             checkLogin() {
-                const vendedorId = localStorage.getItem('kafel_vendedor_id');
+                const vendedorId = sessionStorage.getItem('kafel_vendedor_id');
                 if (!vendedorId) {
                     this.showLoginScreen();
                 } else {
@@ -252,6 +254,7 @@
                     if (data) {
                         this.currentVendedor = data;
                         document.getElementById('vendedor-name').textContent = data.nombre;
+                        await this.cargarProgramadores();
                         this.cargarDashboard();
                     }
                 } catch (error) {
@@ -281,13 +284,13 @@
 
             async cargarVendedoresLogin() {
                 try {
-                    const { data } = await this.supabase.from('vendedores').select('id, nombre').eq('rol', 'vendedor').order('nombre');
+                    const { data } = await this.supabase.from('vendedores').select('id, nombre, rol').order('nombre');
                     const select = document.getElementById('select-vendedor');
                     select.innerHTML = '<option value="">Selecciona un vendedor</option>';
                     (data || []).forEach(v => {
                         const option = document.createElement('option');
                         option.value = v.id;
-                        option.textContent = v.nombre;
+                        option.textContent = v.nombre + ` (${v.rol})`;
                         select.appendChild(option);
                     });
                 } catch (error) {
@@ -301,13 +304,32 @@
                     alert('Por favor selecciona un vendedor');
                     return;
                 }
-                localStorage.setItem('kafel_vendedor_id', vendedorId);
+                sessionStorage.setItem('kafel_vendedor_id', vendedorId);
                 window.location.reload();
             },
 
             logout() {
-                localStorage.removeItem('kafel_vendedor_id');
+                sessionStorage.removeItem('kafel_vendedor_id');
                 window.location.reload();
+            },
+
+            async cargarProgramadores() {
+                try {
+                    const { data } = await this.supabase.from('vendedores').select('id, nombre').eq('rol', 'programador').order('nombre');
+                    this.programadores = data || [];
+                    const select = document.getElementById('venta-programador');
+                    if (select) {
+                        select.innerHTML = '<option value="">Sin asignar</option>';
+                        this.programadores.forEach(p => {
+                            const option = document.createElement('option');
+                            option.value = p.id;
+                            option.textContent = p.nombre;
+                            select.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error cargando programadores:', error);
+                }
             },
 
             showSection(sectionId) {
@@ -324,24 +346,33 @@
 
             async cargarDashboard() {
                 try {
-                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', this.currentVendedor.id);
+                    const { data: ventas } = await this.supabase.from('ventas').select('*').eq('vendedor_id', this.currentVendedor.id);
 
                     const ahora = new Date();
                     const mesActual = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0');
 
-                    const ventasEsteMes = (ventas || []).filter(v => v.fecha_venta.substring(0, 7) === mesActual);
-                    const totalVentas = ventasEsteMes.reduce((sum, v) => sum + v.monto_total, 0);
+                    const ventasEsteMes = (ventas || []).filter(v => {
+                        const fechaVenta = new Date(v.fecha_venta).toISOString().substring(0, 7);
+                        return fechaVenta === mesActual && v.tipo_venta !== 'donacion';
+                    });
+                    const totalVentas = ventasEsteMes.reduce((sum, v) => sum + parseFloat(v.monto_total || 0), 0);
 
-                    document.getElementById('total-ventas-mes').textContent = '$' + totalVentas.toLocaleString('es-CO');
+                    document.getElementById('total-ventas-mes').textContent = '$' + totalVentas.toLocaleString('es-CO', { maximumFractionDigits: 0 });
                     document.getElementById('num-ventas').textContent = ventasEsteMes.length;
 
                     const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id);
-                    const comisionEsteMes = (comisiones || []).filter(c => c.created_at.substring(0, 7) === mesActual).reduce((sum, c) => sum + c.monto, 0);
-                    document.getElementById('mi-comision').textContent = '$' + comisionEsteMes.toLocaleString('es-CO');
+                    const comisionEsteMes = (comisiones || []).filter(c => {
+                        const fechaComision = new Date(c.created_at).toISOString().substring(0, 7);
+                        return fechaComision === mesActual;
+                    }).reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
+                    document.getElementById('mi-comision').textContent = '$' + comisionEsteMes.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
                     const { data: referidos } = await this.supabase.from('vendedores').select('*').eq('vendedor_referidor_id', this.currentVendedor.id);
-                    const comisionReferidos = (comisiones || []).filter(c => referidos && referidos.map(r => r.id).includes(c.vendedor_id) && c.tipo_comision === 'referido' && c.created_at.substring(0, 7) === mesActual).reduce((sum, c) => sum + c.monto, 0);
-                    document.getElementById('comision-equipo').textContent = '$' + comisionReferidos.toLocaleString('es-CO');
+                    const comisionReferidos = (comisiones || []).filter(c => {
+                        const fechaComision = new Date(c.created_at).toISOString().substring(0, 7);
+                        return fechaComision === mesActual && c.tipo_comision === 'referido' && referidos && referidos.map(r => r.id).includes(c.vendedor_id);
+                    }).reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
+                    document.getElementById('comision-equipo').textContent = '$' + comisionReferidos.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
                     this.cargarDesglose(comisiones, mesActual);
                 } catch (error) {
@@ -350,17 +381,21 @@
             },
 
             cargarDesglose(comisiones, mesActual) {
-                const comisionesMes = (comisiones || []).filter(c => c.created_at.substring(0, 7) === mesActual);
+                const comisionesMes = (comisiones || []).filter(c => {
+                    const fechaComision = new Date(c.created_at).toISOString().substring(0, 7);
+                    return fechaComision === mesActual;
+                });
                 const desglose = {};
                 comisionesMes.forEach(c => {
-                    desglose[c.concepto] = (desglose[c.concepto] || 0) + c.monto;
+                    desglose[c.tipo_comision] = (desglose[c.tipo_comision] || 0) + parseFloat(c.monto || 0);
                 });
 
                 let html = '';
-                Object.entries(desglose).forEach(([concepto, monto]) => {
+                const tipos = { base: 'Base', referido: 'Referidos', programador: 'Programador' };
+                Object.entries(desglose).forEach(([tipo, monto]) => {
                     html += `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2B3136;">
-                        <span>${concepto}</span>
-                        <strong>$${monto.toLocaleString('es-CO')}</strong>
+                        <span>${tipos[tipo] || tipo}</span>
+                        <strong>$${monto.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
                     </div>`;
                 });
 
@@ -369,23 +404,26 @@
 
             async cargarMisVentas() {
                 try {
-                    const { data: ventas } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', this.currentVendedor.id).order('fecha_venta', { ascending: false });
+                    const { data: ventas } = await this.supabase.from('ventas').select('*').eq('vendedor_id', this.currentVendedor.id).order('fecha_venta', { ascending: false });
                     const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id);
 
                     const tbody = document.getElementById('ventas-tbody');
                     tbody.innerHTML = '';
 
                     (ventas || []).forEach(venta => {
-                        const comisionVenta = (comisiones || []).filter(c => c.venta_id === venta.id).reduce((sum, c) => sum + c.monto, 0);
+                        const comisionVenta = (comisiones || []).filter(c => c.venta_id === venta.id && c.tipo_comision === 'base').reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
                         const fecha = new Date(venta.fecha_venta).toLocaleDateString('es-CO');
+                        const estadoColor = venta.tipo_venta === 'donacion' ? '#9AA3AB' : (venta.estado_pago === '100_pagado' ? '#2E7D32' : '#1976D2');
+                        const estadoTexto = { 'sin_pagar': 'Sin pagar', '40_pagado': '40% Pagado', '100_pagado': '100% Pagado', 'entregado': 'Entregado' }[venta.estado_pago] || venta.estado_pago;
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${fecha}</td>
                             <td>${venta.cliente_nombre}</td>
-                            <td>$${venta.monto_total.toLocaleString('es-CO')}</td>
-                            <td><span class="badge ${venta.tipo_venta}">${venta.tipo_venta === 'fisica' ? 'Física' : 'Digital'}</span></td>
-                            <td>$${comisionVenta.toLocaleString('es-CO')}</td>
-                            <td><span class="badge activo">${venta.pagado ? 'Pagada' : 'Pendiente'}</span></td>
+                            <td>$${parseFloat(venta.monto_total || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })}</td>
+                            <td><span class="badge ${venta.tipo_venta}">${{ 'fisica': 'Física', 'digital': 'Digital', 'donacion': 'Donación' }[venta.tipo_venta] || venta.tipo_venta}</span></td>
+                            <td>$${comisionVenta.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</td>
+                            <td><span class="badge activo" style="background: ${estadoColor}33; color: ${estadoColor};">${estadoTexto}</span></td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -402,25 +440,26 @@
                 try {
                     const { data: comisiones } = await this.supabase.from('comisiones').select('*').eq('vendedor_id', this.currentVendedor.id).order('created_at', { ascending: false });
 
-                    const comisionBase = (comisiones || []).filter(c => c.tipo_comision === 'base').reduce((sum, c) => sum + c.monto, 0);
-                    const comisionReferidos = (comisiones || []).filter(c => c.tipo_comision === 'referido').reduce((sum, c) => sum + c.monto, 0);
-                    const comisionTotal = comisiones.reduce((sum, c) => sum + c.monto, 0);
+                    const comisionBase = (comisiones || []).filter(c => c.tipo_comision === 'base').reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
+                    const comisionReferidos = (comisiones || []).filter(c => c.tipo_comision === 'referido').reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
+                    const comisionTotal = (comisiones || []).reduce((sum, c) => sum + parseFloat(c.monto || 0), 0);
 
-                    document.getElementById('comision-base').textContent = '$' + comisionBase.toLocaleString('es-CO');
-                    document.getElementById('comision-referidos').textContent = '$' + comisionReferidos.toLocaleString('es-CO');
-                    document.getElementById('comision-acumulada').textContent = '$' + comisionTotal.toLocaleString('es-CO');
+                    document.getElementById('comision-base').textContent = '$' + comisionBase.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+                    document.getElementById('comision-referidos').textContent = '$' + comisionReferidos.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+                    document.getElementById('comision-acumulada').textContent = '$' + comisionTotal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
                     let html = '<div style="max-height: 400px; overflow-y: auto;">';
                     (comisiones || []).forEach(c => {
+                        const tipoLabel = { 'base': 'Comisión Base', 'referido': 'Comisión Referido', 'programador': 'Comisión Programador' }[c.tipo_comision] || c.tipo_comision;
                         html += `<div class="comision-break">
-                            <div><strong>${c.concepto}</strong> (${c.porcentaje}%)</div>
-                            <div style="color: #4C8DFF;"><strong>$${c.monto.toLocaleString('es-CO')}</strong></div>
+                            <div><strong>${tipoLabel}</strong> (${c.porcentaje}%)</div>
+                            <div style="color: #4C8DFF;"><strong>$${parseFloat(c.monto || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong></div>
                             <div style="font-size: 11px; color: #9AA3AB;">${new Date(c.created_at).toLocaleDateString('es-CO')}</div>
                         </div>`;
                     });
                     html += '</div>';
 
-                    document.getElementById('comisiones-detallado').innerHTML = html;
+                    document.getElementById('comisiones-detallado').innerHTML = html || '<p style="color: #9AA3AB;">Sin comisiones registradas</p>';
                 } catch (error) {
                     console.error('Error cargando comisiones:', error);
                 }
@@ -431,18 +470,18 @@
                     const { data: referidos } = await this.supabase.from('vendedores').select('*').eq('vendedor_referidor_id', this.currentVendedor.id);
 
                     if (!referidos || referidos.length === 0) {
-                        document.getElementById('equipo-content').innerHTML = '<p style="color: #9AA3AB;">No tienes vendedores referidos aún. Cuando refiera un vendedor, verá sus datos aquí.</p>';
+                        document.getElementById('equipo-content').innerHTML = '<p style="color: #9AA3AB;">No tienes vendedores referidos aún.</p>';
                         return;
                     }
 
-                    let html = '<div class="table-container"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Nivel Comisión</th><th>Ventas</th></tr></thead><tbody>';
+                    let html = '<div class="table-container"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Rol</th><th>Ventas</th></tr></thead><tbody>';
 
                     for (const referido of referidos) {
-                        const { data: ventasReferido } = await this.supabase.from('ventas_nuevo').select('*').eq('vendedor_id', referido.id);
+                        const { data: ventasReferido } = await this.supabase.from('ventas').select('*').eq('vendedor_id', referido.id);
                         html += `<tr>
                             <td>${referido.nombre}</td>
                             <td>${referido.telefono || '-'}</td>
-                            <td>${referido.nivel_comision}</td>
+                            <td>${referido.rol || 'vendedor'}</td>
                             <td>${(ventasReferido || []).length}</td>
                         </tr>`;
                     }
@@ -454,21 +493,26 @@
                 }
             },
 
-            calcularComisiones(monto, tipoVenta) {
-                const fisica = tipoVenta === 'fisica';
-                return {
-                    operaciones: monto * 0.10,
-                    inversor: monto * 0.05,
-                    fondoKafel: monto * (fisica ? 0.30 : 0.20),
-                    vendedor: monto * this.getPorcentajeVendedor(),
-                    programador: monto * 0.30
-                };
-            },
+            async calcularComisionesPreview(monto, tipoVenta) {
+                try {
+                    const { data: ventasVendedor } = await this.supabase.from('ventas').select('*').eq('vendedor_id', this.currentVendedor.id);
+                    const numVentas = (ventasVendedor || []).length + 1;
+                    const porcentajeBase = numVentas >= 11 ? 0.30 : 0.25;
+                    const esVenta = tipoVenta !== 'donacion';
 
-            getPorcentajeVendedor() {
-                const numVentas = this.currentVendedor.nivel_comision || 1;
-                if (numVentas >= 11) return 0.30;
-                return 0.25;
+                    return {
+                        operaciones: monto * 0.05,
+                        inversor: monto * 0.05,
+                        fondoKafel: monto * 0.20,
+                        vendedor: esVenta ? (monto * porcentajeBase) : 0,
+                        programador: monto * 0.30,
+                        porcentajeVendedor: porcentajeBase * 100,
+                        esVenta: esVenta
+                    };
+                } catch (error) {
+                    console.error('Error calculando comisiones:', error);
+                    return null;
+                }
             },
 
             async registrarVenta() {
@@ -476,46 +520,105 @@
                 const telefono = document.getElementById('cliente-telefono').value;
                 const monto = parseFloat(document.getElementById('venta-monto').value);
                 const tipo = document.getElementById('venta-tipo').value;
-                const programador = document.getElementById('venta-programador').value || null;
+                const programadorId = document.getElementById('venta-programador').value || null;
 
-                if (!nombre || !monto) {
+                if (!nombre || !monto || monto <= 0) {
                     this.showNotification('Completa todos los campos obligatorios', 'error', 'message-registro');
                     return;
                 }
 
                 try {
-                    const { data: venta, error } = await this.supabase.from('ventas_nuevo').insert([{
+                    const { data: venta, error: errorVenta } = await this.supabase.from('ventas').insert([{
                         vendedor_id: this.currentVendedor.id,
-                        programador_id: programador === 'miguel' ? 'MIGUEL_ID' : null,
+                        programador_id: programadorId,
                         cliente_nombre: nombre,
                         cliente_telefono: telefono,
                         monto_total: monto,
-                        tipo_venta: tipo
+                        tipo_venta: tipo,
+                        estado_pago: 'sin_pagar',
+                        fecha_venta: new Date().toISOString()
                     }]).select().single();
 
-                    if (error) throw error;
+                    if (errorVenta) throw errorVenta;
 
-                    const comisiones = this.calcularComisiones(monto, tipo);
-                    const comisionVendedor = comisiones.vendedor;
+                    if (tipo !== 'donacion') {
+                        const { data: ventasVendedor } = await this.supabase.from('ventas').select('*').eq('vendedor_id', this.currentVendedor.id);
+                        const numVentas = ventasVendedor.length;
+                        const porcentaje = numVentas >= 11 ? 0.30 : 0.25;
 
-                    await this.supabase.from('comisiones').insert([{
-                        venta_id: venta.id,
-                        vendedor_id: this.currentVendedor.id,
-                        concepto: 'Comisión por venta ' + tipo,
-                        monto: comisionVendedor,
-                        porcentaje: this.getPorcentajeVendedor() * 100,
-                        tipo_comision: 'base'
-                    }]);
+                        await this.supabase.from('comisiones').insert([{
+                            venta_id: venta.id,
+                            vendedor_id: this.currentVendedor.id,
+                            concepto: 'Comisión por venta ' + tipo,
+                            monto: monto * porcentaje,
+                            porcentaje: porcentaje * 100,
+                            tipo_comision: 'base'
+                        }]);
+                    }
 
                     this.showNotification('✅ Venta registrada exitosamente', 'success', 'message-registro');
                     document.getElementById('cliente-nombre').value = '';
                     document.getElementById('cliente-telefono').value = '';
                     document.getElementById('venta-monto').value = '';
+                    document.getElementById('venta-tipo').value = 'fisica';
+                    document.getElementById('venta-programador').value = '';
+                    document.getElementById('preview-comisiones').style.display = 'none';
                     this.cargarDashboard();
                 } catch (error) {
                     console.error('Error registrando venta:', error);
-                    this.showNotification('Error: ' + error.message, 'error', 'message-registro');
+                    this.showNotification('Error: ' + (error.message || 'No se pudo registrar la venta'), 'error', 'message-registro');
                 }
+            },
+
+            async previewComisiones() {
+                const monto = parseFloat(document.getElementById('venta-monto').value);
+                const tipo = document.getElementById('venta-tipo').value;
+
+                if (!monto || monto <= 0) {
+                    document.getElementById('preview-comisiones').style.display = 'none';
+                    return;
+                }
+
+                const comisiones = await this.calcularComisionesPreview(monto, tipo);
+                if (!comisiones) return;
+
+                let html = `
+                    <div style="font-size: 13px; line-height: 1.8;">
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Operaciones (5%):</span>
+                            <strong>$${comisiones.operaciones.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Inversor (5%):</span>
+                            <strong>$${comisiones.inversor.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>KAFEL Fondo (20%):</span>
+                            <strong>$${comisiones.fondoKafel.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                `;
+
+                if (comisiones.esVenta) {
+                    html += `
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0; border-top: 1px solid #2B3136; padding-top: 5px;">
+                            <span style="color: #00d4ff;">Tu Comisión (${comisiones.porcentajeVendedor.toFixed(0)}%):</span>
+                            <strong style="color: #00d4ff;">$${comisiones.vendedor.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                    `;
+                } else {
+                    html += `<div style="padding-top: 5px; color: #9AA3AB; font-style: italic;">Donación - No genera comisión de vendedor</div>`;
+                }
+
+                html += `
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>Programador (30%):</span>
+                            <strong>$${comisiones.programador.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('preview-content').innerHTML = html;
+                document.getElementById('preview-comisiones').style.display = 'block';
             },
 
             showNotification(msg, type, elementId) {
@@ -526,6 +629,12 @@
                 }
             }
         };
+
+        document.addEventListener('change', () => {
+            if (event.target.id === 'venta-monto' || event.target.id === 'venta-tipo') {
+                app.previewComisiones();
+            }
+        });
 
         app.init();
     </script>
