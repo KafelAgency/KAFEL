@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAFEL - Panel Administrativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #D9A83F;
+            --primary-dark: #9A7A2E;
+            --bg-dark: #0F1419;
+            --bg-darker: #08090D;
+            --surface: #1A1F28;
+            --surface-alt: #242B36;
+            --border: #3A4452;
+            --text-primary: #F2F5F7;
+            --text-secondary: #A7B4BE;
+            --text-tertiary: #647581;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           NAVEGACIÓN
+        ═══════════════════════════════════════════════════════ */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-brand span {
+            font-size: 2rem;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-menu a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-menu a:hover {
+            color: var(--primary);
+            background: rgba(217, 168, 63, 0.1);
+        }
+
+        .nav-menu a.active {
+            color: var(--primary);
+            background: rgba(217, 168, 63, 0.15);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           CONTENEDOR PRINCIPAL
+        ═══════════════════════════════════════════════════════ */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           DASHBOARD CARDS
+        ═══════════════════════════════════════════════════════ */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(217, 168, 63, 0.1);
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TABS
+        ═══════════════════════════════════════════════════════ */
+        .tab-container {
+            display: none;
+        }
+
+        .tab-container.active {
+            display: block;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TABLES
+        ═══════════════════════════════════════════════════════ */
+        .table-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: var(--surface-alt);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tbody tr:hover {
+            background: var(--surface-alt);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           FORMULARIOS
+        ═══════════════════════════════════════════════════════ */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(217, 168, 63, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           BOTONES
+        ═══════════════════════════════════════════════════════ */
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(217, 168, 63, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--surface-alt);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface);
+            border-color: var(--primary);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           BADGES
+        ═══════════════════════════════════════════════════════ */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           MODAL
+        ═══════════════════════════════════════════════════════ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           CHARTS
+        ═══════════════════════════════════════════════════════ */
+        .chart-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           ALERTS
+        ═══════════════════════════════════════════════════════ */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           LOADING
+        ═══════════════════════════════════════════════════════ */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           RESPONSIVE
+        ═══════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            .nav-menu {
+                gap: 0.5rem;
+            }
+
+            .nav-menu a {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ═══════════════════════════════════════════════════════
+         NAVEGACIÓN
+    ═══════════════════════════════════════════════════════ -->
+    <nav>
+        <div class="nav-brand">
+            <span>💼</span> KAFEL Admin
+        </div>
+        <ul class="nav-menu">
+            <li><a class="nav-link active" data-tab="dashboard">Dashboard</a></li>
+            <li><a class="nav-link" data-tab="ventas">Ventas</a></li>
+            <li><a class="nav-link" data-tab="vendedores">Vendedores</a></li>
+            <li><a class="nav-link" data-tab="comisiones">Comisiones</a></li>
+            <li><a class="nav-link" data-tab="gastos">Gastos</a></li>
+            <li><a class="nav-link" data-tab="clientes">Clientes</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="user-info">Conectando...</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- ═══════════════════════════════════════════════════════
+             DASHBOARD
+        ═══════════════════════════════════════════════════════ -->
+        <div id="dashboard" class="tab-container active">
+            <h1 class="section-title">Dashboard</h1>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Vendedores</div>
+                    <div class="metric-value" id="total-vendedores">-</div>
+                    <div class="metric-subtitle">Activos este mes</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Ventas Este Mes</div>
+                    <div class="metric-value" id="ventas-mes">$0</div>
+                    <div class="metric-subtitle" id="ventas-mes-count">0 transacciones</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Fondo KAFEL</div>
+                    <div class="metric-value" id="fondo-kafel">$0</div>
+                    <div class="metric-subtitle">Acumulado</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Comisiones Pendientes</div>
+                    <div class="metric-value" id="comisiones-pendientes">$0</div>
+                    <div class="metric-subtitle" id="comisiones-count">0 pagos</div>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS -->
+            <div class="chart-container">
+                <div class="chart-title">Top 5 Vendedores</div>
+                <canvas id="topVendedoresChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Tipo de Ventas</div>
+                <canvas id="tipoVentasChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             VENTAS
+        ═══════════════════════════════════════════════════════ -->
+        <div id="ventas" class="tab-container">
+            <h1 class="section-title">Todas las Ventas</h1>
+
+            <div class="form-row" style="margin-bottom: 2rem;">
+                <input type="date" id="fecha-desde" placeholder="Desde">
+                <input type="date" id="fecha-hasta" placeholder="Hasta">
+                <select id="tipo-venta-filter">
+                    <option value="">Tipo de Venta</option>
+                    <option value="fisica">Física</option>
+                    <option value="digital">Digital</option>
+                    <option value="donacion">Donación</option>
+                </select>
+                <select id="estado-pago-filter">
+                    <option value="">Estado de Pago</option>
+                    <option value="sin_pagar">Sin Pagar</option>
+                    <option value="40_pagado">40% Pagado</option>
+                    <option value="100_pagado">100% Pagado</option>
+                    <option value="entregado">Entregado</option>
+                </select>
+                <button class="btn-primary" onclick="cargarVentas()">Filtrar</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Vendedor</th>
+                            <th>Cliente</th>
+                            <th>Monto</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ventas-tabla">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-tertiary);">
+                                Cargando ventas...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             VENDEDORES
+        ═══════════════════════════════════════════════════════ -->
+        <div id="vendedores" class="tab-container">
+            <h1 class="section-title">Vendedores</h1>
+
+            <button class="btn-primary" onclick="abrirModalVendedor()">+ Nuevo Vendedor</button>
+
+            <div class="table-wrapper" style="margin-top: 2rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Cédula</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Comisión Base</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendedores-tabla">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-tertiary);">
+                                Cargando vendedores...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             COMISIONES
+        ═══════════════════════════════════════════════════════ -->
+        <div id="comisiones" class="tab-container">
+            <h1 class="section-title">Comisiones</h1>
+
+            <div class="form-row" style="margin-bottom: 2rem;">
+                <select id="vendedor-comisiones-filter">
+                    <option value="">Todos los Vendedores</option>
+                </select>
+                <select id="mes-comisiones-filter">
+                    <option value="">Todos los Meses</option>
+                </select>
+                <button class="btn-primary" onclick="cargarComisiones()">Filtrar</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vendedor</th>
+                            <th>Mes</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                            <th>Porcentaje</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comisiones-tabla">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-tertiary);">
+                                Cargando comisiones...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             GASTOS
+        ═══════════════════════════════════════════════════════ -->
+        <div id="gastos" class="tab-container">
+            <h1 class="section-title">Gastos Operacionales</h1>
+
+            <div class="form-row" style="margin-bottom: 2rem;">
+                <input type="text" id="concepto-gasto" placeholder="Concepto">
+                <input type="number" id="valor-unitario" placeholder="Valor Unitario" step="0.01">
+                <input type="number" id="cantidad-gasto" placeholder="Cantidad" min="1">
+                <button class="btn-primary" onclick="registrarGasto()">Registrar Gasto</button>
+            </div>
+
+            <div id="alerta-gastos" style="margin-bottom: 1.5rem;"></div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Valor Unitario</th>
+                            <th>Cantidad</th>
+                            <th>Total</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gastos-tabla">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-tertiary);">
+                                Cargando gastos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             CLIENTES
+        ═══════════════════════════════════════════════════════ -->
+        <div id="clientes" class="tab-container">
+            <h1 class="section-title">Clientes</h1>
+
+            <div class="form-row" style="margin-bottom: 2rem;">
+                <input type="text" id="nombre-cliente-filter" placeholder="Buscar empresa">
+                <select id="sector-filter">
+                    <option value="">Sector</option>
+                    <option value="Alimentos">Alimentos</option>
+                    <option value="Ropa">Ropa</option>
+                    <option value="Tecnología">Tecnología</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Otro">Otro</option>
+                </select>
+                <button class="btn-primary" onclick="cargarClientes()">Filtrar</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Sector</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Contacto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientes-tabla">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-tertiary);">
+                                Cargando clientes...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MODAL NUEVO VENDEDOR
+    ═══════════════════════════════════════════════════════ -->
+    <div id="modalVendedor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nuevo Vendedor</h2>
+                <button class="close-btn" onclick="cerrarModalVendedor()">✕</button>
+            </div>
+
+            <div class="form-group">
+                <label>Nombre Completo *</label>
+                <input type="text" id="nombre-vendedor" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cédula *</label>
+                    <input type="text" id="cedula-vendedor" required>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="email-vendedor" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Teléfono *</label>
+                    <input type="tel" id="telefono-vendedor" required>
+                </div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select id="rol-vendedor">
+                        <option value="vendedor">Vendedor</option>
+                        <option value="programador">Programador</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Vendedor Referidor</label>
+                <select id="referidor-vendedor">
+                    <option value="">Ninguno</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="cerrarModalVendedor()">Cancelar</button>
+                <button class="btn-primary" onclick="guardarVendedor()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════
+        // CONFIGURACIÓN SUPABASE
+        // ═══════════════════════════════════════════════════════
+        const SUPABASE_URL = 'https://vkagxzxthfwxmfcwlvrr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrYWd4enh0aGZ3eG1mY3dsdnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MDA5NDcsImV4cCI6MjEwNTI3Njk0N30.iCb1cVtFoSE7KtuNagJls8nrU4lNI_vR7gkNXecNPkc';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ═══════════════════════════════════════════════════════
+        // VARIABLES GLOBALES
+        // ═══════════════════════════════════════════════════════
+        let charts = {};
+        let vendedoresGlobal = [];
+
+        // ═══════════════════════════════════════════════════════
+        // INICIALIZACIÓN
+        // ═══════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Dashboard KAFEL cargando...');
+            await verificarConexion();
+            inicializarNavegacion();
+            await cargarDatos();
+        });
+
+        async function verificarConexion() {
+            try {
+                const { data, error } = await supabase.from('vendedores').select('count()', { count: 'exact' }).limit(0);
+                if (error) throw error;
+                console.log('✅ Conectado a Supabase');
+                document.getElementById('user-info').textContent = '✅ Conectado';
+            } catch (error) {
+                console.error('❌ Error de conexión:', error);
+                document.getElementById('user-info').textContent = '❌ Error de conexión';
+            }
+        }
+
+        function inicializarNavegacion() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    cambiarTab(link.dataset.tab);
+                });
+            });
+        }
+
+        function cambiarTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-container').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar tab seleccionado
+            document.getElementById(tabName).classList.add('active');
+
+            // Actualizar nav
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.tab === tabName) {
+                    link.classList.add('active');
+                    if (tabName === 'dashboard') {
+                        cargarDashboard();
+                    } else if (tabName === 'ventas') {
+                        cargarVentas();
+                    } else if (tabName === 'vendedores') {
+                        cargarVendedores();
+                    } else if (tabName === 'comisiones') {
+                        cargarComisiones();
+                    } else if (tabName === 'gastos') {
+                        cargarGastos();
+                    } else if (tabName === 'clientes') {
+                        cargarClientes();
+                    }
+                }
+            });
+        }
+
+        async function cargarDatos() {
+            await cargarDashboard();
+            await cargarVendedores();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // DASHBOARD
+        // ═══════════════════════════════════════════════════════
+        async function cargarDashboard() {
+            try {
+                const mesActual = new Date().toISOString().slice(0, 7);
+
+                // Total vendedores
+                const { data: vendedores, error: e1 } = await supabase
+                    .from('vendedores')
+                    .select('id')
+                    .eq('estado', 'activo');
+
+                if (e1) throw e1;
+                document.getElementById('total-vendedores').textContent = vendedores.length;
+
+                // Ventas este mes
+                const { data: ventasMes, error: e2 } = await supabase
+                    .from('ventas')
+                    .select('monto_total')
+                    .gte('fecha_venta', mesActual + '-01')
+                    .lt('fecha_venta', mesActual + '-32')
+                    .neq('tipo_venta', 'donacion');
+
+                if (e2) throw e2;
+                const totalVentas = ventasMes.reduce((sum, v) => sum + (v.monto_total || 0), 0);
+                document.getElementById('ventas-mes').textContent = '$' + totalVentas.toLocaleString();
+                document.getElementById('ventas-mes-count').textContent = `${ventasMes.length} transacciones`;
+
+                // Fondo KAFEL
+                const { data: fondo, error: e3 } = await supabase
+                    .from('fondo_kafel')
+                    .select('saldo_final')
+                    .order('mes_ano', { ascending: false })
+                    .limit(1);
+
+                if (e3) throw e3;
+                const fondoTotal = fondo.length > 0 ? fondo[0].saldo_final : 0;
+                document.getElementById('fondo-kafel').textContent = '$' + fondoTotal.toLocaleString();
+
+                // Comisiones pendientes
+                const { data: comisiones, error: e4 } = await supabase
+                    .from('comisiones')
+                    .select('monto')
+                    .neq('estado', 'entregado');
+
+                if (e4) throw e4;
+                const comisPendiente = comisiones.reduce((sum, c) => sum + (c.monto || 0), 0);
+                document.getElementById('comisiones-pendientes').textContent = '$' + comisPendiente.toLocaleString();
+                document.getElementById('comisiones-count').textContent = `${comisiones.length} pagos`;
+
+                // Gráficos
+                await graficarTopVendedores();
+                await graficarTipoVentas();
+
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+            }
+        }
+
+        async function graficarTopVendedores() {
+            try {
+                const { data, error } = await supabase
+                    .from('ventas')
+                    .select('vendedor_id, vendedores(nombre), monto_total');
+
+                if (error) throw error;
+
+                const ventas = {};
+                data.forEach(v => {
+                    const vendedor = v.vendedores?.nombre || 'Desconocido';
+                    ventas[vendedor] = (ventas[vendedor] || 0) + v.monto_total;
+                });
+
+                const top5 = Object.entries(ventas)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                const ctx = document.getElementById('topVendedoresChart').getContext('2d');
+                if (charts.topVendedores) charts.topVendedores.destroy();
+
+                charts.topVendedores = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: top5.map(v => v[0]),
+                        datasets: [{
+                            label: 'Ventas ($)',
+                            data: top5.map(v => v[1]),
+                            backgroundColor: 'rgba(217, 168, 63, 0.7)',
+                            borderColor: 'rgba(217, 168, 63, 1)',
+                            borderWidth: 1,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: 'rgba(167, 180, 190, 0.7)' },
+                                grid: { color: 'rgba(58, 68, 82, 0.3)' }
+                            },
+                            x: { ticks: { color: 'rgba(167, 180, 190, 0.7)' } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error en gráfico:', error);
+            }
+        }
+
+        async function graficarTipoVentas() {
+            try {
+                const { data, error } = await supabase
+                    .from('ventas')
+                    .select('tipo_venta, monto_total');
+
+                if (error) throw error;
+
+                const tipos = {};
+                data.forEach(v => {
+                    tipos[v.tipo_venta] = (tipos[v.tipo_venta] || 0) + v.monto_total;
+                });
+
+                const ctx = document.getElementById('tipoVentasChart').getContext('2d');
+                if (charts.tipoVentas) charts.tipoVentas.destroy();
+
+                charts.tipoVentas = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(tipos).map(t => t.charAt(0).toUpperCase() + t.slice(1)),
+                        datasets: [{
+                            data: Object.values(tipos),
+                            backgroundColor: ['rgba(217, 168, 63, 0.7)', 'rgba(16, 185, 129, 0.7)', 'rgba(239, 68, 68, 0.7)'],
+                            borderColor: ['rgba(217, 168, 63, 1)', 'rgba(16, 185, 129, 1)', 'rgba(239, 68, 68, 1)'],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { labels: { color: 'rgba(167, 180, 190, 0.7)' } } }
+                    }
+                });
+            } catch (error) {
+                console.error('Error en gráfico:', error);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // VENTAS
+        // ═══════════════════════════════════════════════════════
+        async function cargarVentas() {
+            try {
+                const fechaDesde = document.getElementById('fecha-desde').value;
+                const fechaHasta = document.getElementById('fecha-hasta').value;
+                const tipoVenta = document.getElementById('tipo-venta-filter').value;
+                const estadoPago = document.getElementById('estado-pago-filter').value;
+
+                let query = supabase.from('ventas').select(`
+                    id, fecha_venta, monto_total, tipo_venta, estado_pago,
+                    vendedores(nombre), clientes(nombre_empresa)
+                `);
+
+                if (fechaDesde) query = query.gte('fecha_venta', fechaDesde);
+                if (fechaHasta) query = query.lte('fecha_venta', fechaHasta);
+                if (tipoVenta) query = query.eq('tipo_venta', tipoVenta);
+                if (estadoPago) query = query.eq('estado_pago', estadoPago);
+
+                const { data, error } = await query.order('fecha_venta', { ascending: false });
+                if (error) throw error;
+
+                const tbody = document.getElementById('ventas-tabla');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">No hay ventas</td></tr>';
+                    return;
+                }
+
+                data.forEach(venta => {
+                    const badgeClass = venta.estado_pago === 'entregado' ? 'badge-success' :
+                                      venta.estado_pago === 'sin_pagar' ? 'badge-danger' : 'badge-warning';
+                    const badgeText = venta.estado_pago.replace('_', ' ').toUpperCase();
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${new Date(venta.fecha_venta).toLocaleDateString()}</td>
+                            <td>${venta.vendedores?.nombre || '-'}</td>
+                            <td>${venta.clientes?.nombre_empresa || 'N/A'}</td>
+                            <td>$${venta.monto_total.toLocaleString()}</td>
+                            <td>${venta.tipo_venta.charAt(0).toUpperCase() + venta.tipo_venta.slice(1)}</td>
+                            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando ventas:', error);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // VENDEDORES
+        // ═══════════════════════════════════════════════════════
+        async function cargarVendedores() {
+            try {
+                const { data, error } = await supabase
+                    .from('vendedores')
+                    .select('*')
+                    .order('nombre');
+
+                if (error) throw error;
+                vendedoresGlobal = data;
+
+                const tbody = document.getElementById('vendedores-tabla');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay vendedores</td></tr>';
+                    return;
+                }
+
+                data.forEach(vendedor => {
+                    const badge = vendedor.estado === 'activo' ? 'badge-success' : 'badge-danger';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${vendedor.nombre}</td>
+                            <td>${vendedor.cedula}</td>
+                            <td>${vendedor.email}</td>
+                            <td>${vendedor.rol.charAt(0).toUpperCase() + vendedor.rol.slice(1)}</td>
+                            <td>${vendedor.comision_base || '-'}%</td>
+                            <td><span class="badge ${badge}">${vendedor.estado.toUpperCase()}</span></td>
+                            <td>
+                                <button class="btn-secondary btn-small" onclick="verDetallesVendedor('${vendedor.id}')">Ver</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Cargar referidores en modal
+                const selectReferidor = document.getElementById('referidor-vendedor');
+                selectReferidor.innerHTML = '<option value="">Ninguno</option>';
+                data.forEach(v => {
+                    selectReferidor.innerHTML += `<option value="${v.id}">${v.nombre}</option>`;
+                });
+
+            } catch (error) {
+                console.error('Error cargando vendedores:', error);
+            }
+        }
+
+        function abrirModalVendedor() {
+            document.getElementById('modalVendedor').classList.add('active');
+        }
+
+        function cerrarModalVendedor() {
+            document.getElementById('modalVendedor').classList.remove('active');
+            document.getElementById('nombre-vendedor').value = '';
+            document.getElementById('cedula-vendedor').value = '';
+            document.getElementById('email-vendedor').value = '';
+            document.getElementById('telefono-vendedor').value = '';
+        }
+
+        async function guardarVendedor() {
+            try {
+                const nombre = document.getElementById('nombre-vendedor').value;
+                const cedula = document.getElementById('cedula-vendedor').value;
+                const email = document.getElementById('email-vendedor').value;
+                const telefono = document.getElementById('telefono-vendedor').value;
+                const rol = document.getElementById('rol-vendedor').value;
+                const referidor = document.getElementById('referidor-vendedor').value || null;
+
+                if (!nombre || !cedula || !email || !telefono) {
+                    alert('Completa todos los campos requeridos');
+                    return;
+                }
+
+                const { error } = await supabase.from('vendedores').insert([{
+                    nombre, cedula, email, telefono, rol,
+                    vendedor_referidor_id: referidor,
+                    comision_base: rol === 'vendedor' ? 25 : 30,
+                    estado: 'activo',
+                    fecha_contrato: new Date().toISOString().split('T')[0]
+                }]);
+
+                if (error) throw error;
+
+                alert('✅ Vendedor creado exitosamente');
+                cerrarModalVendedor();
+                cargarVendedores();
+
+            } catch (error) {
+                console.error('Error guardando vendedor:', error);
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        function verDetallesVendedor(id) {
+            console.log('Ver detalles:', id);
+            // Implementar modal de detalles
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // COMISIONES
+        // ═══════════════════════════════════════════════════════
+        async function cargarComisiones() {
+            try {
+                const vendedorFilter = document.getElementById('vendedor-comisiones-filter').value;
+                const mesFilter = document.getElementById('mes-comisiones-filter').value;
+
+                let query = supabase.from('comisiones').select(`
+                    id, monto, porcentaje, tipo, mes_pago,
+                    vendedores(nombre)
+                `);
+
+                if (vendedorFilter) query = query.eq('vendedor_id', vendedorFilter);
+                if (mesFilter) query = query.eq('mes_pago', mesFilter);
+
+                const { data, error } = await query.order('mes_pago', { ascending: false });
+                if (error) throw error;
+
+                const tbody = document.getElementById('comisiones-tabla');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay comisiones</td></tr>';
+                    return;
+                }
+
+                data.forEach(comisión => {
+                    const badgeClass = comisión.tipo === 'venta' ? 'badge-success' : 'badge-warning';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${comisión.vendedores?.nombre || '-'}</td>
+                            <td>${comisión.mes_pago || '-'}</td>
+                            <td><span class="badge ${badgeClass}">${comisión.tipo.toUpperCase()}</span></td>
+                            <td>$${comisión.monto.toLocaleString()}</td>
+                            <td>${comisión.porcentaje}%</td>
+                            <td><span class="badge badge-warning">PENDIENTE</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando comisiones:', error);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // GASTOS
+        // ═══════════════════════════════════════════════════════
+        async function registrarGasto() {
+            try {
+                const concepto = document.getElementById('concepto-gasto').value;
+                const valorUnitario = parseFloat(document.getElementById('valor-unitario').value);
+                const cantidad = parseInt(document.getElementById('cantidad-gasto').value);
+
+                if (!concepto || !valorUnitario || !cantidad) {
+                    alert('Completa todos los campos');
+                    return;
+                }
+
+                const mesAno = new Date().toISOString().slice(0, 7);
+
+                const { error } = await supabase.from('gastos').insert([{
+                    concepto,
+                    valor_unitario: valorUnitario,
+                    cantidad: cantidad,
+                    mes_ano: mesAno,
+                    fecha_registro: new Date().toISOString().split('T')[0]
+                }]);
+
+                if (error) throw error;
+
+                alert('✅ Gasto registrado');
+                document.getElementById('concepto-gasto').value = '';
+                document.getElementById('valor-unitario').value = '';
+                document.getElementById('cantidad-gasto').value = '';
+                cargarGastos();
+
+            } catch (error) {
+                console.error('Error registrando gasto:', error);
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function cargarGastos() {
+            try {
+                const mesActual = new Date().toISOString().slice(0, 7);
+
+                const { data, error } = await supabase
+                    .from('gastos')
+                    .select('*')
+                    .eq('mes_ano', mesActual)
+                    .order('fecha_registro', { ascending: false });
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('gastos-tabla');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay gastos este mes</td></tr>';
+                    return;
+                }
+
+                let totalGastos = 0;
+                data.forEach(gasto => {
+                    const total = gasto.valor_unitario * gasto.cantidad;
+                    totalGastos += total;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${gasto.concepto}</td>
+                            <td>$${gasto.valor_unitario.toLocaleString()}</td>
+                            <td>${gasto.cantidad}</td>
+                            <td>$${total.toLocaleString()}</td>
+                            <td>${new Date(gasto.fecha_registro).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+
+                // Verificar presupuesto (5% de operaciones)
+                const presupuesto = 100; // Ajustar según lógica de negocio
+                const alertaDiv = document.getElementById('alerta-gastos');
+                if (totalGastos > presupuesto) {
+                    alertaDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            ⚠️ Gastos ($${totalGastos.toLocaleString()}) exceден el presupuesto ($${presupuesto})
+                        </div>
+                    `;
+                } else {
+                    alertaDiv.innerHTML = '';
+                }
+
+            } catch (error) {
+                console.error('Error cargando gastos:', error);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // CLIENTES
+        // ═══════════════════════════════════════════════════════
+        async function cargarClientes() {
+            try {
+                const nombreFilter = document.getElementById('nombre-cliente-filter').value;
+                const sectorFilter = document.getElementById('sector-filter').value;
+
+                let query = supabase.from('clientes').select('*');
+
+                if (nombreFilter) query = query.ilike('nombre_empresa', `%${nombreFilter}%`);
+                if (sectorFilter) query = query.eq('sector', sectorFilter);
+
+                const { data, error } = await query.order('nombre_empresa');
+                if (error) throw error;
+
+                const tbody = document.getElementById('clientes-tabla');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay clientes</td></tr>';
+                    return;
+                }
+
+                data.forEach(cliente => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${cliente.nombre_empresa}</td>
+                            <td>${cliente.sector}</td>
+                            <td>${cliente.telefono || '-'}</td>
+                            <td>${cliente.email || '-'}</td>
+                            <td>${new Date(cliente.fecha_contacto).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando clientes:', error);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // MODAL CLOSE
+        // ═══════════════════════════════════════════════════════
+        document.getElementById('modalVendedor')?.addEventListener('click', (e) => {
+            if (e.target.id === 'modalVendedor') {
+                cerrarModalVendedor();
+            }
+        });
+    </script>
+</body>
+</html>
