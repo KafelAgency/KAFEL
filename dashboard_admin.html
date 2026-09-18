@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KAFEL - Panel Administrativo</title>
+    <title>KAFEL - Panel Administrativo Completo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -66,8 +66,9 @@
 
         .nav-menu {
             display: flex;
-            gap: 2rem;
+            gap: 1rem;
             list-style: none;
+            flex-wrap: wrap;
         }
 
         .nav-menu a {
@@ -75,10 +76,11 @@
             text-decoration: none;
             cursor: pointer;
             transition: all 0.3s;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
             border-radius: 4px;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .nav-menu a:hover {
@@ -537,12 +539,12 @@
             <span>💼</span> KAFEL Admin
         </div>
         <ul class="nav-menu">
-            <li><a class="nav-link active" data-tab="dashboard">Dashboard</a></li>
-            <li><a class="nav-link" data-tab="ventas">Ventas</a></li>
-            <li><a class="nav-link" data-tab="vendedores">Vendedores</a></li>
-            <li><a class="nav-link" data-tab="comisiones">Comisiones</a></li>
-            <li><a class="nav-link" data-tab="gastos">Gastos</a></li>
-            <li><a class="nav-link" data-tab="clientes">Clientes</a></li>
+            <li><a class="nav-link active" data-tab="inicio">📊 Inicio</a></li>
+            <li><a class="nav-link" data-tab="ventas">💰 Ventas</a></li>
+            <li><a class="nav-link" data-tab="vendedores">👥 Vendedores</a></li>
+            <li><a class="nav-link" data-tab="distribucion">📈 Distribución</a></li>
+            <li><a class="nav-link" data-tab="gastos">💸 Gastos</a></li>
+            <li><a class="nav-link" data-tab="clientes">📋 Clientes</a></li>
         </ul>
         <div class="nav-user">
             <span id="user-info">Conectando...</span>
@@ -551,9 +553,9 @@
 
     <div class="container">
         <!-- ═══════════════════════════════════════════════════════
-             DASHBOARD
+             INICIO
         ═══════════════════════════════════════════════════════ -->
-        <div id="dashboard" class="tab-container active">
+        <div id="inicio" class="tab-container active">
             <h1 class="section-title">Dashboard</h1>
 
             <div class="metrics-grid">
@@ -675,9 +677,76 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════
-             COMISIONES
+             DISTRIBUCIÓN DE VENTAS
         ═══════════════════════════════════════════════════════ -->
-        <div id="comisiones" class="tab-container">
+        <div id="distribucion" class="tab-container">
+            <h1 class="section-title">Distribución de Ventas</h1>
+
+            <div style="margin-bottom: 2rem;">
+                <label for="mes-distribucion" style="color: var(--text-primary); margin-right: 1rem;">Selecciona mes:</label>
+                <input type="month" id="mes-distribucion" style="padding: 0.5rem; width: 200px;">
+                <button class="btn-primary" onclick="cargarDistribucion()" style="margin-left: 1rem;">Cargar</button>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Distribución Física (10% Operaciones, 5% Inversor, 30% KAFEL, 25% Vendedor, 30% Programador)</div>
+                <canvas id="distribucionFisicaChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Distribución Digital (5% Operaciones, 5% Inversor, 30% KAFEL, 25% Vendedor, 30% Programador)</div>
+                <canvas id="distribucionDigitalChart"></canvas>
+            </div>
+
+            <div class="table-wrapper" style="margin-top: 2rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Física (%)</th>
+                            <th>Digital (%)</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Operaciones</strong></td>
+                            <td>10%</td>
+                            <td>5%</td>
+                            <td>Gastos operativos</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inversor</strong></td>
+                            <td>5%</td>
+                            <td>5%</td>
+                            <td>Retorno inversor</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fondo KAFEL</strong></td>
+                            <td>30%</td>
+                            <td>30%</td>
+                            <td>Capital empresa (60% Miguel, 40% Memo)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Vendedor</strong></td>
+                            <td>25%</td>
+                            <td>25%</td>
+                            <td>Comisión vendedor base</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Programador</strong></td>
+                            <td>30%</td>
+                            <td>30%</td>
+                            <td>Comisión desarrollo</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             COMISIONES (ELIMINADA - INTEGRADA EN DISTRIBUCION)
+        ═══════════════════════════════════════════════════════ -->
             <h1 class="section-title">Comisiones</h1>
 
             <div class="form-row" style="margin-bottom: 2rem;">
@@ -955,14 +1024,14 @@
                 link.classList.remove('active');
                 if (link.dataset.tab === tabName) {
                     link.classList.add('active');
-                    if (tabName === 'dashboard') {
+                    if (tabName === 'inicio') {
                         cargarDashboard();
                     } else if (tabName === 'ventas') {
                         cargarVentas();
                     } else if (tabName === 'vendedores') {
                         cargarVendedores();
-                    } else if (tabName === 'comisiones') {
-                        cargarComisiones();
+                    } else if (tabName === 'distribucion') {
+                        cargarDistribucion();
                     } else if (tabName === 'gastos') {
                         cargarGastos();
                     } else if (tabName === 'clientes') {
@@ -1301,9 +1370,76 @@
         }
 
         // ═══════════════════════════════════════════════════════
-        // COMISIONES
+        // DISTRIBUCIÓN DE VENTAS
         // ═══════════════════════════════════════════════════════
-        async function cargarComisiones() {
+        async function cargarDistribucion() {
+            try {
+                const mes = document.getElementById('mes-distribucion').value || new Date().toISOString().slice(0, 7);
+
+                const { data: ventasFisica, error: e1 } = await supabase
+                    .from('distribucion_venta')
+                    .select('*')
+                    .eq('tipo_venta', 'fisica');
+
+                const { data: ventasDigital, error: e2 } = await supabase
+                    .from('distribucion_venta')
+                    .select('*')
+                    .eq('tipo_venta', 'digital');
+
+                if (e1 || e2) throw e1 || e2;
+
+                console.log('✅ Distribuciones cargadas:', ventasFisica.length, ventasDigital.length);
+
+                graficarDistribucion('fisica', ventasFisica);
+                graficarDistribucion('digital', ventasDigital);
+
+            } catch (error) {
+                console.error('Error cargando distribuciones:', error);
+            }
+        }
+
+        function graficarDistribucion(tipo, data) {
+            const labels = ['Operaciones', 'Inversor', 'KAFEL', 'Vendedor', 'Programador'];
+            const valores = tipo === 'fisica' ? [10, 5, 30, 25, 30] : [5, 5, 30, 25, 30];
+
+            const ctx = document.getElementById(`distribucion${tipo.charAt(0).toUpperCase() + tipo.slice(1)}Chart`).getContext('2d');
+            if (charts[`dist${tipo}`]) charts[`dist${tipo}`].destroy();
+
+            charts[`dist${tipo}`] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(217, 168, 63, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(59, 130, 246, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(217, 168, 63, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(59, 130, 246, 1)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { labels: { color: 'rgba(167, 180, 190, 0.7)' } }
+                    }
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // COMISIONES (ELIMINADA)
+        // ═══════════════════════════════════════════════════════
+        async function cargarComisiones_old() {
             try {
                 const vendedorFilter = document.getElementById('vendedor-comisiones-filter').value;
                 const mesFilter = document.getElementById('mes-comisiones-filter').value;
