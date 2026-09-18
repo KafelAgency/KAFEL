@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAFEL - Panel Administrativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0D0F; color: #EDEFF1; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(135deg, #001a4d 0%, #00264d 100%); padding: 30px 20px; overflow-y: auto; }
+        .logo { display: flex; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .logo-icon { width: 50px; height: 50px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 24px; color: #001a4d; }
+        .logo-text h1 { font-size: 24px; font-weight: 700; color: white; }
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 10px; }
+        .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); border-left: 3px solid #4C8DFF; color: white; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #14171A; padding: 20px 30px; border-bottom: 1px solid #2B3136; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 24px; color: #4C8DFF; }
+        .content { flex: 1; overflow-y: auto; padding: 30px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card-title { font-size: 14px; color: #9AA3AB; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-value { font-size: 28px; font-weight: 700; color: #4C8DFF; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .table-container { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+        table { width: 100%; }
+        th { background: #1D2226; padding: 15px; text-align: left; font-weight: 600; color: #9AA3AB; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 15px; border-bottom: 1px solid #2B3136; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge.activo { background: #C8E6C9; color: #2E7D32; }
+        .stat-box { background: #1D2226; border: 1px solid #2B3136; border-radius: 10px; padding: 15px; text-align: center; }
+        .stat-label { font-size: 11px; color: #9AA3AB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #4C8DFF; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #EDEFF1; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 12px; background: #1D2226; border: 1px solid #2B3136; border-radius: 8px; color: #EDEFF1; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { border-color: #4C8DFF; outline: none; }
+        button { padding: 12px 24px; background: linear-gradient(135deg, #4C8DFF, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .message { padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .message.success { background: #C8E6C9; color: #2E7D32; }
+        .message.error { background: #FFCDD2; color: #C62828; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #14171A; border: 1px solid #2B3136; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { font-size: 20px; color: #4C8DFF; }
+        .close-btn { background: none; border: none; color: #9AA3AB; font-size: 28px; cursor: pointer; padding: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">⚙️</div>
+                <div class="logo-text"><h1>ADMIN</h1></div>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><div class="nav-link active" onclick="app.showSection('dashboard')">📊 Dashboard</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('vendedores')">👥 Vendedores</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('ventas')">💰 Ventas</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('gastos')">💸 Gastos</div></li>
+                    <li class="nav-item"><div class="nav-link" onclick="app.showSection('registrar')">➕ Registrar Vendedor</div></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <h2 id="section-title">Dashboard</h2>
+                <button onclick="app.logout()">Salir</button>
+            </header>
+
+            <div class="content">
+                <!-- DASHBOARD -->
+                <div id="dashboard" class="section active">
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-title">Total Vendedores</div>
+                            <div class="card-value" id="total-vendedores">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Ventas Este Mes</div>
+                            <div class="card-value" id="total-ventas">$0</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Gastos Registrados</div>
+                            <div class="card-value" id="total-gastos">$0</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Vendedores Activos</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Nombre</th><th>Email</th><th>Estado</th></tr></thead>
+                                <tbody id="top-vendedores"><tr><td colspan="3" style="text-align: center;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VENDEDORES -->
+                <div id="vendedores" class="section">
+                    <div class="card">
+                        <div class="card-title">Lista de Vendedores</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Nombre</th><th>Cédula</th><th>Email</th><th>Teléfono</th><th>Estado</th><th>Acciones</th></tr></thead>
+                                <tbody id="vendedores-tbody"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VENTAS -->
+                <div id="ventas" class="section">
+                    <div class="card">
+                        <div class="card-title">Todas las Ventas</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Fecha</th><th>Vendedor</th><th>Cliente</th><th>Monto</th><th>Tipo</th><th>Estado</th></tr></thead>
+                                <tbody id="ventas-tbody"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GASTOS -->
+                <div id="gastos" class="section">
+                    <div class="card">
+                        <div class="card-title">Registrar Nuevo Gasto</div>
+                        <div id="msg-gasto"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Concepto</label>
+                                <input type="text" id="gasto-concepto" placeholder="Ej: Cuenta Claude">
+                            </div>
+                            <div class="form-group">
+                                <label>Valor ($)</label>
+                                <input type="number" id="gasto-valor" placeholder="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Cantidad</label>
+                                <input type="number" id="gasto-cantidad" value="1" min="1">
+                            </div>
+                        </div>
+                        <button onclick="app.registrarGasto()" style="width: 100%; margin-top: 10px;">Registrar Gasto</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Gastos Este Mes</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Concepto</th><th>Valor</th><th>Cantidad</th><th>Total</th><th>Acciones</th></tr></thead>
+                                <tbody id="gastos-tbody"><tr><td colspan="5" style="text-align: center;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRAR VENDEDOR -->
+                <div id="registrar" class="section">
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px; color: #4C8DFF;">Registrar Nuevo Vendedor</h3>
+                        <div id="msg-vendedor"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Nombre *</label>
+                                <input type="text" id="reg-nombre" placeholder="Juan García">
+                            </div>
+                            <div class="form-group">
+                                <label>Cédula *</label>
+                                <input type="text" id="reg-cedula" placeholder="1234567890">
+                            </div>
+                            <div class="form-group">
+                                <label>Email *</label>
+                                <input type="email" id="reg-email" placeholder="email@ejemplo.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono *</label>
+                                <input type="tel" id="reg-telefono" placeholder="3001234567">
+                            </div>
+                            <div class="form-group">
+                                <label>Rol</label>
+                                <select id="reg-rol">
+                                    <option value="vendedor">Vendedor</option>
+                                    <option value="programador">Programador</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Referidor (Opcional)</label>
+                                <select id="reg-referidor">
+                                    <option value="">Sin referidor</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="app.registrarVendedor()" style="width: 100%; margin-top: 20px;">Registrar Vendedor</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wmjmsdofvmhfnqkzmbsx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtam1zZG9mdm1oZm5xa3ptYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MTI4NTgsImV4cCI6MjAxNjA4Njg1OH0.k2gHWFajpPxqVJvQ3DBW0OBbmRZA1h3wSP-BXQNJ7B8';
+
+        const app = {
+            supabase: null,
+
+            init() {
+                console.log('🚀 Iniciando KAFEL Admin Dashboard...');
+                try {
+                    this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('✅ Supabase conectado correctamente');
+                    this.cargarDatos();
+                } catch (error) {
+                    console.error('❌ Error:', error);
+                }
+            },
+
+            async cargarDatos() {
+                console.log('📊 Cargando datos...');
+                try {
+                    // Cargar vendedores
+                    const { data: vendedores, error: errVend } = await this.supabase.from('vendedores').select('*');
+                    if (errVend) throw errVend;
+                    console.log('✅ Vendedores:', vendedores?.length);
+                    document.getElementById('total-vendedores').textContent = (vendedores || []).length;
+                    this.cargarSelectReferidores(vendedores);
+                    this.mostrarVendedores(vendedores);
+                    this.mostrarTopVendedores(vendedores);
+
+                    // Cargar ventas
+                    const { data: ventas, error: errVent } = await this.supabase.from('ventas').select('*');
+                    if (errVent) throw errVent;
+                    console.log('✅ Ventas:', ventas?.length);
+                    const mesActual = new Date().toISOString().substring(0, 7);
+                    const ventasMes = (ventas || []).filter(v => v.fecha_venta.substring(0, 7) === mesActual && v.tipo_venta !== 'donacion');
+                    const totalVentas = ventasMes.reduce((sum, v) => sum + v.monto_total, 0);
+                    document.getElementById('total-ventas').textContent = '$' + Math.round(totalVentas).toLocaleString('es-CO');
+                    this.mostrarVentas(ventas);
+
+                    // Cargar gastos
+                    const { data: gastos, error: errGas } = await this.supabase.from('gastos').select('*');
+                    if (errGas) throw errGas;
+                    console.log('✅ Gastos:', gastos?.length);
+                    const gastosMes = (gastos || []).filter(g => g.mes_ano === mesActual);
+                    const totalGastos = gastosMes.reduce((sum, g) => sum + (g.valor_unitario * g.cantidad), 0);
+                    document.getElementById('total-gastos').textContent = '$' + Math.round(totalGastos).toLocaleString('es-CO');
+                    this.mostrarGastos(gastos);
+                } catch (error) {
+                    console.error('❌ Error cargando datos:', error.message);
+                }
+            },
+
+            mostrarVendedores(vendedores) {
+                const tbody = document.getElementById('vendedores-tbody');
+                tbody.innerHTML = (vendedores || [])
+                    .filter(v => v.rol === 'vendedor')
+                    .map(v => `<tr>
+                        <td>${v.nombre}</td>
+                        <td>${v.cedula || '-'}</td>
+                        <td>${v.email || '-'}</td>
+                        <td>${v.telefono || '-'}</td>
+                        <td><span class="badge activo">${v.estado}</span></td>
+                        <td><button onclick="app.eliminarVendedor('${v.id}')" style="padding: 6px 12px; font-size: 12px;">Eliminar</button></td>
+                    </tr>`).join('') || '<tr><td colspan="6">Sin vendedores</td></tr>';
+            },
+
+            mostrarVentas(ventas) {
+                const tbody = document.getElementById('ventas-tbody');
+                tbody.innerHTML = (ventas || []).slice(-10).reverse().map(v => `<tr>
+                    <td>${new Date(v.fecha_venta).toLocaleDateString('es-CO')}</td>
+                    <td>${v.cliente_nombre}</td>
+                    <td>${v.cliente_nombre}</td>
+                    <td>$${v.monto_total.toLocaleString('es-CO')}</td>
+                    <td>${v.tipo_venta}</td>
+                    <td>${v.estado_pago}</td>
+                </tr>`).join('') || '<tr><td colspan="6">Sin ventas</td></tr>';
+            },
+
+            mostrarGastos(gastos) {
+                const mesActual = new Date().toISOString().substring(0, 7);
+                const gastosMes = (gastos || []).filter(g => g.mes_ano === mesActual);
+                const tbody = document.getElementById('gastos-tbody');
+                tbody.innerHTML = gastosMes.map(g => `<tr>
+                    <td>${g.concepto}</td>
+                    <td>$${g.valor_unitario.toLocaleString('es-CO')}</td>
+                    <td>${g.cantidad}</td>
+                    <td>$${(g.valor_unitario * g.cantidad).toLocaleString('es-CO')}</td>
+                    <td><button onclick="app.eliminarGasto('${g.id}')" style="padding: 6px 12px;">Eliminar</button></td>
+                </tr>`).join('') || '<tr><td colspan="5">Sin gastos este mes</td></tr>';
+            },
+
+            mostrarTopVendedores(vendedores) {
+                const tbody = document.getElementById('top-vendedores');
+                tbody.innerHTML = (vendedores || [])
+                    .filter(v => v.rol === 'vendedor')
+                    .slice(0, 5)
+                    .map(v => `<tr>
+                        <td>${v.nombre}</td>
+                        <td>${v.email || '-'}</td>
+                        <td><span class="badge activo">${v.estado}</span></td>
+                    </tr>`).join('') || '<tr><td colspan="3">Sin vendedores</td></tr>';
+            },
+
+            cargarSelectReferidores(vendedores) {
+                const select = document.getElementById('reg-referidor');
+                select.innerHTML = '<option value="">Sin referidor</option>' +
+                    (vendedores || [])
+                        .filter(v => v.rol === 'vendedor')
+                        .map(v => `<option value="${v.id}">${v.nombre}</option>`)
+                        .join('');
+            },
+
+            async registrarVendedor() {
+                const nombre = document.getElementById('reg-nombre').value;
+                const cedula = document.getElementById('reg-cedula').value;
+                const email = document.getElementById('reg-email').value;
+                const telefono = document.getElementById('reg-telefono').value;
+                const rol = document.getElementById('reg-rol').value;
+                const referidor = document.getElementById('reg-referidor').value || null;
+
+                if (!nombre || !cedula || !email || !telefono) {
+                    this.showMsg('msg-vendedor', '⚠️ Completa todos los campos', 'error');
+                    return;
+                }
+
+                try {
+                    const { error } = await this.supabase.from('vendedores').insert([{
+                        nombre, cedula, email, telefono, rol,
+                        vendedor_referidor_id: referidor,
+                        nivel_comision: 1,
+                        comision_base: 0.25,
+                        estado: 'activo'
+                    }]);
+
+                    if (error) throw error;
+
+                    this.showMsg('msg-vendedor', '✅ Vendedor registrado', 'success');
+                    document.getElementById('reg-nombre').value = '';
+                    document.getElementById('reg-cedula').value = '';
+                    document.getElementById('reg-email').value = '';
+                    document.getElementById('reg-telefono').value = '';
+                    this.cargarDatos();
+                } catch (error) {
+                    this.showMsg('msg-vendedor', '❌ Error: ' + error.message, 'error');
+                }
+            },
+
+            async registrarGasto() {
+                const concepto = document.getElementById('gasto-concepto').value;
+                const valor = parseFloat(document.getElementById('gasto-valor').value);
+                const cantidad = parseInt(document.getElementById('gasto-cantidad').value);
+
+                if (!concepto || !valor) {
+                    this.showMsg('msg-gasto', '⚠️ Completa los campos', 'error');
+                    return;
+                }
+
+                try {
+                    const mesAno = new Date().toISOString().substring(0, 7);
+                    const { error } = await this.supabase.from('gastos').insert([{
+                        concepto, valor_unitario: valor, cantidad, mes_ano: mesAno
+                    }]);
+
+                    if (error) throw error;
+
+                    this.showMsg('msg-gasto', '✅ Gasto registrado', 'success');
+                    document.getElementById('gasto-concepto').value = '';
+                    document.getElementById('gasto-valor').value = '';
+                    document.getElementById('gasto-cantidad').value = '1';
+                    this.cargarDatos();
+                } catch (error) {
+                    this.showMsg('msg-gasto', '❌ Error: ' + error.message, 'error');
+                }
+            },
+
+            async eliminarVendedor(vendedorId) {
+                if (!confirm('¿Eliminar vendedor? (Requiere contraseña)')) return;
+                const pwd = prompt('Contraseña:');
+                if (pwd !== '24398As+-') {
+                    alert('❌ Contraseña incorrecta');
+                    return;
+                }
+                try {
+                    const { error } = await this.supabase.from('vendedores').delete().eq('id', vendedorId);
+                    if (error) throw error;
+                    this.cargarDatos();
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            },
+
+            async eliminarGasto(gastoId) {
+                if (!confirm('¿Eliminar gasto?')) return;
+                try {
+                    const { error } = await this.supabase.from('gastos').delete().eq('id', gastoId);
+                    if (error) throw error;
+                    this.cargarDatos();
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            },
+
+            showSection(sectionId) {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById('section-title').textContent = event.target.textContent;
+            },
+
+            showMsg(elementId, msg, type) {
+                const elem = document.getElementById(elementId);
+                if (elem) {
+                    elem.innerHTML = `<div class="message ${type}">${msg}</div>`;
+                    setTimeout(() => { elem.innerHTML = ''; }, 4000);
+                }
+            },
+
+            logout() {
+                if (confirm('¿Salir?')) window.location.href = '/';
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+</html>

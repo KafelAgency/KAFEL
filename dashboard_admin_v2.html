@@ -455,10 +455,16 @@
             currentVendedor: null,
 
             init() {
-                this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                this.cargarDashboard();
-                this.cargarSelectReferidores();
-                this.setMesActual();
+                try {
+                    this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('✅ Supabase conectado');
+                    this.cargarDashboard();
+                    this.cargarSelectReferidores();
+                    this.setMesActual();
+                } catch (error) {
+                    console.error('❌ Error conectando Supabase:', error);
+                    alert('Error conectando a Supabase: ' + error.message);
+                }
             },
 
             setMesActual() {
