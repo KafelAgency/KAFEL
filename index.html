@@ -424,6 +424,8 @@ h1 .acc{display:block;color:var(--accent-text)}
 .sub-t{padding:12px 14px;border-radius:var(--r-md);background:var(--bg);border:1px solid var(--border)}
 .sub-t b{display:block;font-size:1.0625rem;line-height:1.2}
 .sub-t span{display:block;margin-top:4px;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.subblock{display:grid;gap:var(--s3);padding-top:var(--s5);border-top:1px solid var(--border)}
+.subblock .tag{justify-self:start}
 .sub-lead{font-weight:700;font-size:1.125rem}
 
 /* ============ Menú móvil / tablet ============ */
@@ -942,7 +944,7 @@ var T = {
  'cat.demo.count':['{n} producto(s) en el carrito.','{n} product(s) in the cart.'],
 
  'plans.eyebrow':['Planes de catálogo','Catalog plans'],
- 'plans.pay':['Los planes se pagan una sola vez: se paga un anticipo para iniciar y el saldo al entregar.','Plans are paid once: an advance payment starts the project and the balance is paid on delivery.'],
+ 'plans.pay':['El catálogo se paga una sola vez: se paga un anticipo para iniciar y el saldo al entregar.','The catalog is paid once: an advance payment starts the project and the balance is paid on delivery.'],
  'plan.base':['Plan Base','Base Plan'],'plan.normal':['Plan Normal','Standard Plan'],'plan.premium':['Plan Premium','Premium Plan'],
  'plan.unit.15':['Productos','Products'],'plan.unit.60':['Productos','Products'],
  'plan.unlimited':['Ilimitado','Unlimited'],'plan.unit.unl':['Productos, imágenes y clientes','Products, images and customers'],
@@ -1007,9 +1009,9 @@ var T = {
  'pd.once':['Pago único','One-time payment'],'pd.cop':['Pesos colombianos (COP)','Colombian pesos (COP)'],
  'pd.includes':['Qué incluye este plan','What this plan includes'],'pd.examples':['Ejemplos reales de este plan','Real examples of this plan'],
  'wk.view':['Ver catálogo','View catalog'],
- 'sub.toggle':['Suscripciones mensuales opcionales','Optional monthly subscriptions'],
+ 'sub.always':['Siempre va con tu catálogo','Always comes with your catalog'],
  'sub.title':['Nosotros cuidamos tu catálogo','We take care of your catalog'],
- 'sub.lead':['Servicio aparte y opcional, para cualquier plan. Si no tienes tiempo de subir fotos o hacer cambios, nos lo dices y lo hacemos por ti, sin problema.','A separate, optional service for any plan. If you don’t have time to upload photos or make changes, just tell us and we’ll do it for you, no problem.'],
+ 'sub.lead':['La suscripción mensual garantiza la ciberseguridad y el mantenimiento de tu catálogo. Si no tienes tiempo de subir fotos o hacer cambios, nos lo dices y lo hacemos por ti, sin problema.','The monthly subscription guarantees your catalog’s cybersecurity and maintenance. If you don’t have time to upload photos or make changes, just tell us and we’ll do it for you, no problem.'],
  'sub.month':['por mes','per month'],
  'sub.ini':['Inicial','Starter'],'sub.ini.h':['Cambios sin límite','Unlimited changes'],'sub.ini.s':['Nosotros los hacemos','We make them'],
  'sub.adv':['Avanzado','Advanced'],'sub.adv.h':['Crece con tu negocio','Grow with your business'],'sub.adv.s':['Diseño, novedades y formación','Design, news and training'],
@@ -1023,7 +1025,7 @@ var T = {
  'sf.teach':['Enseñanza y clases de técnicas de ventas digitales','Training and classes on digital sales techniques'],
  'sf.ai':['Agente de IA integrado en el catálogo','AI agent built into the catalog'],
  'sf.crm':['Control y base de datos de todos los clientes que compren o ingresen','Control and database of every customer who buys or visits'],
- 'sub.note':['Las suscripciones son opcionales y se cobran cada mes, aparte del pago único del catálogo. Valores en pesos colombianos. Se pueden contratar junto con el plan Base, Normal o Premium.','Subscriptions are optional and billed monthly, separate from the one-time catalog payment. Values in Colombian pesos. They can be added to the Base, Normal or Premium plan.'],
+ 'sub.note':['La suscripción se cobra cada mes, aparte del pago único del catálogo. Valores en pesos colombianos. Elige Inicial, Avanzado o Profesional junto con tu plan Base, Normal o Premium.','The subscription is billed monthly, separate from the one-time catalog payment. Values in Colombian pesos. Choose Starter, Advanced or Professional together with your Base, Standard or Premium plan.'],
  'menu.open':['Abrir menú','Open menu'],'menu.close':['Cerrar menú','Close menu'],
  'inv.plans.title':['Planes de inventario','Inventory plans'],
  'inv.pickHint':['Elige un plan para ver todo lo que incluye.','Choose a plan to see everything it includes.'],
@@ -1150,7 +1152,7 @@ function resetAgenda() {
 }
 resetInv(); resetAgenda();
 var INV_MAX = 12;
-var selPlan = null, subOpen = false, selInv = null;
+var selPlan = null, selInv = null;
 
 /* =====================================================================
    Render
@@ -1258,16 +1260,14 @@ function renderPlans() {
         }).join('') + '</div></div>' +
       '</div>' +
       '<p class="paynote">' + svg('lock') + '<span>' + t('plans.pay') + '</span></p>' +
-      '<div><button type="button" class="disc" data-subtoggle aria-expanded="' + subOpen + '" aria-controls="subs"><span>' + t('sub.toggle') + '</span>' + svg('down') + '</button>' +
-      '<div class="collapse' + (subOpen ? ' open' : '') + '" id="subs"' + (subOpen ? '' : ' inert') + '><div class="in-wrap"><div class="disc-body">' +
-        '<p class="sub-lead">' + t('sub.title') + '</p><p class="note" style="margin:6px 0 16px">' + t('sub.lead') + '</p>' +
+      '<div class="subblock"><span class="tag ok">' + svg('lock') + '<span>' + t('sub.always') + '</span></span>' +
+        '<p class="sub-lead">' + t('sub.title') + '</p><p class="note" style="margin:0 0 8px">' + t('sub.lead') + '</p>' +
         '<div class="subs">' + SUBS.map(function (sb) {
           return '<article class="sub' + (sb.hl ? ' hl' : '') + '"><span class="plan-name" style="font-size:.8125rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)">' + t('sub.' + sb.id) + '</span>' +
             '<div class="price">' + sb.price + '<small>' + t('sub.month') + '</small></div>' +
             '<div class="sub-t"><b>' + t('sub.' + sb.id + '.h') + '</b><span>' + t('sub.' + sb.id + '.s') + '</span></div>' + featList(sb.feats) + '</article>';
         }).join('') + '</div>' +
-        '<p class="paynote" style="margin-top:16px">' + svg('bell') + '<span>' + t('sub.note') + '</span></p>' +
-      '</div></div></div></div>' +
+        '<p class="paynote" style="margin-top:8px">' + svg('bell') + '<span>' + t('sub.note') + '</span></p></div>' +
     '</article>';
   setCollapse(det, true);
 }
@@ -1434,9 +1434,6 @@ document.addEventListener('click', function (e) {
     var ag = $('[data-invplan="' + iid + '"]'); if (ag) ag.focus({ preventScroll: true });
     if (selInv) setTimeout(function () { var d = $('#invDetail'); if (d) d.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' }); }, 60);
     return;
-  }
-  if ((el = e.target.closest('[data-subtoggle]'))) {
-    subOpen = !subOpen; el.setAttribute('aria-expanded', subOpen); setCollapse($('#subs'), subOpen); return;
   }
   if ((el = e.target.closest('.disc[aria-controls]'))) {
     var tgt = document.getElementById(el.getAttribute('aria-controls')); var open = el.getAttribute('aria-expanded') !== 'true';
